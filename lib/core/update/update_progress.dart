@@ -56,10 +56,7 @@ class UpdateDownloadTrack extends StatelessWidget {
               // 控制器按 1% 节流推送，直接把 fraction 交给 widthFactor
               // 会一格一格地跳。补间到下一个百分点，读起来才是连续推进。
               TweenAnimationBuilder<double>(
-                tween: Tween<double>(
-                  begin: 0,
-                  end: fraction!.clamp(0.0, 1.0),
-                ),
+                tween: Tween<double>(begin: 0, end: fraction!.clamp(0.0, 1.0)),
                 duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOut,
                 builder: (context, value, child) => Align(
@@ -142,13 +139,13 @@ class UpdateDownloadChip extends StatelessWidget {
     final verifying = state.phase == UpdatePhase.verifying;
     final fraction = verifying ? null : state.progress?.fraction;
 
-    // 底色和阴影只画在 DecoratedBox 上，Material 退成透明层，
-    // 单纯为「取消」提供水波纹和裁切。
+    // 底色和描边只画在 DecoratedBox 上，Material 退成透明层，
+    // 单纯为「取消」提供水波纹和裁切。扁平风格不用阴影，靠描边从页面上分出来。
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: context.radii.blockAll,
-        boxShadow: colors.shadowCard,
+        border: Border.all(color: colors.line),
       ),
       child: Material(
         type: MaterialType.transparency,

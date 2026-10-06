@@ -9,6 +9,8 @@ import 'package:ligy_medical/core/database/app_database.dart';
 import 'package:ligy_medical/core/media/image_storage.dart';
 import 'package:ligy_medical/core/preferences/default_profile.dart';
 import 'package:ligy_medical/core/providers.dart';
+import 'package:ligy_medical/core/theme/app_theme.dart';
+import 'package:ligy_medical/features/profiles/presentation/profile_avatar.dart';
 import 'package:ligy_medical/core/utils/ledger_date.dart';
 import 'package:ligy_medical/features/records/application/record_service.dart';
 
@@ -187,6 +189,57 @@ void main() {
     expect(find.text('打开应用时进入'), findsOneWidget);
 
     // 卸载后 drift 会用零时长定时器清理 stream，冲掉它们，否则报定时器未决。
+    await tester.pumpWidget(const SizedBox());
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  });
+
+  testWidgets('进入档案后主题色换成档案的标识色', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await tester.runAsync(() => _seed(db));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          appearanceProvider.overrideWith(
+            () => AppearanceController.seeded(AppearanceConfig.initial),
+          ),
+        ],
+        child: const LigyMedicalApp(),
+      ),
+    );
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle();
+    // 「妈妈」的标识色是下标 1（橙），首页还是全局蓝。
+    await tester.tap(find.text('妈妈').last);
+    await settle();
+    final fab = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    expect(fab.backgroundColor, profileColor(1, Brightness.light));
+    expect(fab.backgroundColor, isNot(AppColors.light.primary));
+
+    // 从档案里再打开的页面同样是档案色。
+    await tester.tap(find.byTooltip('新建记录'));
+    await settle();
+    final context = tester.element(find.text('新建记录').last);
+    expect(context.colors.primary, profileColor(1, Brightness.light));
+
     await tester.pumpWidget(const SizedBox());
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 50));

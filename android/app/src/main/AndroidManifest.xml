@@ -1,8 +1,32 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- open_filex 自带这几条读存储 / 相册权限，只在打开应用目录之外的文件时才用。
+         附件都在应用私有目录里，用不到；留着会让安装页显示「读取照片和视频」。 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
+    <!-- 只用于检查更新与下载新版本 APK；病历数据不联网。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 应用内安装新版本 APK。本应用通过阿里云 OSS 分发、不上架应用商店，
+         因此可以使用该权限；若将来要上架需移除并改为跳转浏览器下载。 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:label="健康档案"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- 把下载好的 APK 以 content:// 形式交给系统安装器。
+             authority 刻意区别于 share_plus / image_picker / open_filex
+             各自的 provider，避免冲突。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.update_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_provider_paths" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:exported="true"

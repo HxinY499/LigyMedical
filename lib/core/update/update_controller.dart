@@ -103,7 +103,7 @@ class UpdateController extends StateNotifier<UpdateState> {
 
   /// 启动时调用一次。
   ///
-  /// **失败静默**：用户此刻在记账，检查不到新版本不该弹任何东西。这条策略只
+  /// **失败静默**：用户此刻正在用应用，检查不到新版本不该弹任何东西。这条策略只
   /// 属于启动路径，所以判断写在这里而不是服务层——手动检查要的正好相反。
   Future<void> checkOnLaunch() async {
     if (_checked) return;

@@ -196,9 +196,10 @@ class RecordService {
               .insert(
                 IndicatorValuesCompanion.insert(
                   id: _uuid.v4(),
-                  recordId: recordId,
+                  recordId: Value(recordId),
                   indicatorId: indicatorId,
                   value: input.value,
+                  date: draft.date,
                   sortOrder: Value(i),
                 ),
               );
@@ -240,7 +241,6 @@ class RecordService {
         ?attachment.thumbnailPath,
       ],
     ]);
-    await _db.pruneIndicators(draft.profileId);
     return recordId;
   }
 
@@ -249,7 +249,6 @@ class RecordService {
       _db.records,
     )..where((row) => row.id.equals(record.id))).go();
     await _storage.deleteRecordDirectory(record.id);
-    await _db.pruneIndicators(record.profileId);
   }
 
   /// 删除档案：库里级联删光，再清掉每条记录的附件目录。

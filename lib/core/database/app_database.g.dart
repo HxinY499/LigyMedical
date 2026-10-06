@@ -210,7 +210,7 @@ class ProfileEntry extends DataClass implements Insertable<ProfileEntry> {
   final String id;
   final String name;
 
-  /// [kProfileColors] 的下标。
+  /// [kProfileAccents] 的下标：档案标识色，也是进入该档案后的主题色。
   final int colorIndex;
 
   /// 是否在档案里显示「注射」模块。
@@ -2609,9 +2609,9 @@ class $IndicatorValuesTable extends IndicatorValues
   late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
     'record_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES records (id) ON DELETE CASCADE',
     ),
@@ -2639,6 +2639,15 @@ class $IndicatorValuesTable extends IndicatorValues
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -2657,6 +2666,7 @@ class $IndicatorValuesTable extends IndicatorValues
     recordId,
     indicatorId,
     value,
+    date,
     sortOrder,
   ];
   @override
@@ -2681,8 +2691,6 @@ class $IndicatorValuesTable extends IndicatorValues
         _recordIdMeta,
         recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_recordIdMeta);
     }
     if (data.containsKey('indicator_id')) {
       context.handle(
@@ -2702,6 +2710,14 @@ class $IndicatorValuesTable extends IndicatorValues
       );
     } else if (isInserting) {
       context.missing(_valueMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
     }
     if (data.containsKey('sort_order')) {
       context.handle(
@@ -2725,7 +2741,7 @@ class $IndicatorValuesTable extends IndicatorValues
       recordId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}record_id'],
-      )!,
+      ),
       indicatorId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}indicator_id'],
@@ -2733,6 +2749,10 @@ class $IndicatorValuesTable extends IndicatorValues
       value: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}value'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
       )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -2750,24 +2770,33 @@ class $IndicatorValuesTable extends IndicatorValues
 class IndicatorValueEntry extends DataClass
     implements Insertable<IndicatorValueEntry> {
   final String id;
-  final String recordId;
+
+  /// 来自哪条记录；单独添加的数值为 null。删记录时连带删掉它带来的数值。
+  final String? recordId;
   final String indicatorId;
   final double value;
+
+  /// `yyyy-MM-dd`。来自记录的数值随记录日期同步（记录每次保存都会重写它的数值）。
+  final String date;
   final int sortOrder;
   const IndicatorValueEntry({
     required this.id,
-    required this.recordId,
+    this.recordId,
     required this.indicatorId,
     required this.value,
+    required this.date,
     required this.sortOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['record_id'] = Variable<String>(recordId);
+    if (!nullToAbsent || recordId != null) {
+      map['record_id'] = Variable<String>(recordId);
+    }
     map['indicator_id'] = Variable<String>(indicatorId);
     map['value'] = Variable<double>(value);
+    map['date'] = Variable<String>(date);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -2775,9 +2804,12 @@ class IndicatorValueEntry extends DataClass
   IndicatorValuesCompanion toCompanion(bool nullToAbsent) {
     return IndicatorValuesCompanion(
       id: Value(id),
-      recordId: Value(recordId),
+      recordId: recordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recordId),
       indicatorId: Value(indicatorId),
       value: Value(value),
+      date: Value(date),
       sortOrder: Value(sortOrder),
     );
   }
@@ -2789,9 +2821,10 @@ class IndicatorValueEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return IndicatorValueEntry(
       id: serializer.fromJson<String>(json['id']),
-      recordId: serializer.fromJson<String>(json['recordId']),
+      recordId: serializer.fromJson<String?>(json['recordId']),
       indicatorId: serializer.fromJson<String>(json['indicatorId']),
       value: serializer.fromJson<double>(json['value']),
+      date: serializer.fromJson<String>(json['date']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -2800,24 +2833,27 @@ class IndicatorValueEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'recordId': serializer.toJson<String>(recordId),
+      'recordId': serializer.toJson<String?>(recordId),
       'indicatorId': serializer.toJson<String>(indicatorId),
       'value': serializer.toJson<double>(value),
+      'date': serializer.toJson<String>(date),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
 
   IndicatorValueEntry copyWith({
     String? id,
-    String? recordId,
+    Value<String?> recordId = const Value.absent(),
     String? indicatorId,
     double? value,
+    String? date,
     int? sortOrder,
   }) => IndicatorValueEntry(
     id: id ?? this.id,
-    recordId: recordId ?? this.recordId,
+    recordId: recordId.present ? recordId.value : this.recordId,
     indicatorId: indicatorId ?? this.indicatorId,
     value: value ?? this.value,
+    date: date ?? this.date,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   IndicatorValueEntry copyWithCompanion(IndicatorValuesCompanion data) {
@@ -2828,6 +2864,7 @@ class IndicatorValueEntry extends DataClass
           ? data.indicatorId.value
           : this.indicatorId,
       value: data.value.present ? data.value.value : this.value,
+      date: data.date.present ? data.date.value : this.date,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -2839,13 +2876,15 @@ class IndicatorValueEntry extends DataClass
           ..write('recordId: $recordId, ')
           ..write('indicatorId: $indicatorId, ')
           ..write('value: $value, ')
+          ..write('date: $date, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, recordId, indicatorId, value, sortOrder);
+  int get hashCode =>
+      Object.hash(id, recordId, indicatorId, value, date, sortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2854,14 +2893,16 @@ class IndicatorValueEntry extends DataClass
           other.recordId == this.recordId &&
           other.indicatorId == this.indicatorId &&
           other.value == this.value &&
+          other.date == this.date &&
           other.sortOrder == this.sortOrder);
 }
 
 class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
   final Value<String> id;
-  final Value<String> recordId;
+  final Value<String?> recordId;
   final Value<String> indicatorId;
   final Value<double> value;
+  final Value<String> date;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const IndicatorValuesCompanion({
@@ -2869,25 +2910,28 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
     this.recordId = const Value.absent(),
     this.indicatorId = const Value.absent(),
     this.value = const Value.absent(),
+    this.date = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   IndicatorValuesCompanion.insert({
     required String id,
-    required String recordId,
+    this.recordId = const Value.absent(),
     required String indicatorId,
     required double value,
+    required String date,
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       recordId = Value(recordId),
        indicatorId = Value(indicatorId),
-       value = Value(value);
+       value = Value(value),
+       date = Value(date);
   static Insertable<IndicatorValueEntry> custom({
     Expression<String>? id,
     Expression<String>? recordId,
     Expression<String>? indicatorId,
     Expression<double>? value,
+    Expression<String>? date,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -2896,6 +2940,7 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
       if (recordId != null) 'record_id': recordId,
       if (indicatorId != null) 'indicator_id': indicatorId,
       if (value != null) 'value': value,
+      if (date != null) 'date': date,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2903,9 +2948,10 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
 
   IndicatorValuesCompanion copyWith({
     Value<String>? id,
-    Value<String>? recordId,
+    Value<String?>? recordId,
     Value<String>? indicatorId,
     Value<double>? value,
+    Value<String>? date,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -2914,6 +2960,7 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
       recordId: recordId ?? this.recordId,
       indicatorId: indicatorId ?? this.indicatorId,
       value: value ?? this.value,
+      date: date ?? this.date,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -2934,6 +2981,9 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
     if (value.present) {
       map['value'] = Variable<double>(value.value);
     }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -2950,6 +3000,7 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
           ..write('recordId: $recordId, ')
           ..write('indicatorId: $indicatorId, ')
           ..write('value: $value, ')
+          ..write('date: $date, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3142,7 +3193,7 @@ class InjectionPlanEntry extends DataClass
   final String drug;
   final int intervalDays;
 
-  /// 轮换部位，按轮换顺序以换行分隔。
+  /// 常用部位，按显示顺序以换行分隔。记录注射时作为快捷选项。
   final String sites;
   final String note;
   final int updatedAt;
@@ -6808,18 +6859,20 @@ typedef $$IndicatorsTableProcessedTableManager =
 typedef $$IndicatorValuesTableCreateCompanionBuilder =
     IndicatorValuesCompanion Function({
       required String id,
-      required String recordId,
+      Value<String?> recordId,
       required String indicatorId,
       required double value,
+      required String date,
       Value<int> sortOrder,
       Value<int> rowid,
     });
 typedef $$IndicatorValuesTableUpdateCompanionBuilder =
     IndicatorValuesCompanion Function({
       Value<String> id,
-      Value<String> recordId,
+      Value<String?> recordId,
       Value<String> indicatorId,
       Value<double> value,
+      Value<String> date,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6840,9 +6893,9 @@ final class $$IndicatorValuesTableReferences
   static $RecordsTable _recordIdTable(_$AppDatabase db) =>
       db.records.createAlias('indicator_values__record_id__records__id');
 
-  $$RecordsTableProcessedTableManager get recordId {
-    final $_column = $_itemColumn<String>('record_id')!;
-
+  $$RecordsTableProcessedTableManager? get recordId {
+    final $_column = $_itemColumn<String>('record_id');
+    if ($_column == null) return null;
     final manager = $$RecordsTableTableManager(
       $_db,
       $_db.records,
@@ -6888,6 +6941,11 @@ class $$IndicatorValuesTableFilterComposer
 
   ColumnFilters<double> get value => $composableBuilder(
     column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6962,6 +7020,11 @@ class $$IndicatorValuesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -7028,6 +7091,9 @@ class $$IndicatorValuesTableAnnotationComposer
 
   GeneratedColumn<double> get value =>
       $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -7110,9 +7176,10 @@ class $$IndicatorValuesTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> recordId = const Value.absent(),
+                Value<String?> recordId = const Value.absent(),
                 Value<String> indicatorId = const Value.absent(),
                 Value<double> value = const Value.absent(),
+                Value<String> date = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IndicatorValuesCompanion(
@@ -7120,15 +7187,17 @@ class $$IndicatorValuesTableTableManager
                 recordId: recordId,
                 indicatorId: indicatorId,
                 value: value,
+                date: date,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String id,
-                required String recordId,
+                Value<String?> recordId = const Value.absent(),
                 required String indicatorId,
                 required double value,
+                required String date,
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IndicatorValuesCompanion.insert(
@@ -7136,6 +7205,7 @@ class $$IndicatorValuesTableTableManager
                 recordId: recordId,
                 indicatorId: indicatorId,
                 value: value,
+                date: date,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),

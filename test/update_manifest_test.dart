@@ -8,11 +8,11 @@ void main() {
   String manifest({
     String tag = 'v1.5.9',
     String url =
-        'https://ligy-tally-releases.oss-cn-hangzhou.aliyuncs.com/LigyTally-1.5.9.apk',
-    String name = 'LigyTally-1.5.9.apk',
+        'https://releases.ligezhang.cn/medical/LigyMedical-1.5.9.apk',
+    String name = 'LigyMedical-1.5.9.apk',
     Object? sha = sha256,
     int size = 24600000,
-    String body = '## 更新内容\n\n- 统计页可以排除分类',
+    String body = '## 更新内容\n\n- 指标趋势图支持参考范围',
   }) {
     final shaField = sha == null ? '' : '"sha256": "$sha",';
     return '''
@@ -33,14 +33,14 @@ void main() {
     expect(info, isNotNull);
     expect(info!.version.toString(), '1.5.9');
     expect(info.tagName, 'v1.5.9');
-    expect(info.apkName, 'LigyTally-1.5.9.apk');
+    expect(info.apkName, 'LigyMedical-1.5.9.apk');
     expect(
       info.apkUrl,
-      'https://ligy-tally-releases.oss-cn-hangzhou.aliyuncs.com/LigyTally-1.5.9.apk',
+      'https://releases.ligezhang.cn/medical/LigyMedical-1.5.9.apk',
     );
     expect(info.apkSize, 24600000);
     expect(info.sha256, sha256);
-    expect(info.releaseNotes, contains('统计页可以排除分类'));
+    expect(info.releaseNotes, contains('指标趋势图支持参考范围'));
   });
 
   test('校验值允许大写，解析后收成小写', () {
@@ -59,7 +59,7 @@ void main() {
     expect(parseUpdateManifest('[]'), isNull);
     expect(parseUpdateManifest(manifest(tag: 'not-a-version')), isNull);
     expect(parseUpdateManifest(manifest(url: 'http://insecure.example/a.apk')), isNull);
-    expect(parseUpdateManifest(manifest(name: 'LigyTally-1.5.9.zip')), isNull);
+    expect(parseUpdateManifest(manifest(name: 'LigyMedical-1.5.9.zip')), isNull);
     expect(parseUpdateManifest(manifest(sha: 'too-short')), isNull);
   });
 }

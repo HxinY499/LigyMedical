@@ -49,3 +49,6 @@ app.*.map.json
 **/ios/Flutter/Generated.xcconfig
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Flutter/ephemeral/
+
+# 正式包产物（APK、校验值、latest.json）只传 OSS，不进版本库
+/dist/

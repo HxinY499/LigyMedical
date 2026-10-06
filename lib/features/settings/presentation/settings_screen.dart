@@ -12,6 +12,7 @@ import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/settings_widgets.dart';
+import 'about_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -289,6 +290,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                const SectionLabel('关于'),
+                const AboutCard(),
               ],
             ),
           ),

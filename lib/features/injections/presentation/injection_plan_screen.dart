@@ -7,7 +7,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 
-/// 注射计划：药品、间隔、轮换部位、注意事项。
+/// 注射计划：药品、间隔、常用部位、注意事项。
 class InjectionPlanScreen extends ConsumerStatefulWidget {
   const InjectionPlanScreen({super.key, required this.profileId, this.plan});
 
@@ -100,18 +100,10 @@ class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
                 ),
                 const SizedBox(height: 20),
                 FormSectionLabel(
-                  '轮换部位（按顺序建议下一个）',
+                  '常用部位（记录注射时可快速选择）',
                   trailing: FormLinkButton(label: '添加', onTap: _addSite),
                 ),
-                if (_sites.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Text(
-                      '不设部位则不做建议',
-                      style: TextStyle(fontSize: 12.5, color: colors.inactive),
-                    ),
-                  )
-                else
+                if (_sites.isNotEmpty)
                   ReorderableListView(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),

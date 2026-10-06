@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as p;
@@ -9,15 +8,11 @@ class StoredImage {
   const StoredImage({
     required this.imagePath,
     required this.thumbnailPath,
-    required this.width,
-    required this.height,
     required this.sizeBytes,
   });
 
   final String imagePath;
   final String thumbnailPath;
-  final int width;
-  final int height;
   final int sizeBytes;
 }
 
@@ -30,7 +25,7 @@ class StoredFile {
 
 /// 记录附件的落盘。库里只存相对 support 目录的路径。
 ///
-/// 目录结构：`media/{recordId}/{attachmentId}.jpg|_thumb.jpg|.pdf`。
+/// 目录结构：`media/{recordId}/{attachmentId}.<原扩展名>|_thumb.jpg`。
 /// 删记录时整目录清掉即可。
 class ImageStorage {
   ImageStorage() : _overrideRoot = null;
@@ -74,32 +69,31 @@ class ImageStorage {
     return directory;
   }
 
+  /// 存一张图片：**原图原样拷贝**，另外生成一张列表用的小缩略图。
+  ///
+  /// 原图不压缩、不转码、不改尺寸、不去 EXIF：检查报告要能放大看清小字，
+  /// 医院给的是什么就存什么。只有缩略图是重新编码的小 JPEG，它不替代原图，
+  /// 详情页和全屏查看一律读原图。
   Future<StoredImage> storeImage({
     required String sourcePath,
     required String recordId,
     required String attachmentId,
   }) async {
     final directory = await _recordDirectory(recordId);
-    final imageFile = File(p.join(directory.path, '$attachmentId.jpg'));
+    final extension = p.extension(sourcePath).toLowerCase();
+    final imageFile = File(
+      p.join(
+        directory.path,
+        '$attachmentId${extension.isEmpty ? '.jpg' : extension}',
+      ),
+    );
     final thumbnailFile = File(
       p.join(directory.path, '${attachmentId}_thumb.jpg'),
     );
-    // 报告要能放大看清小字，长边比账单图留得更宽。
-    final compressed = await FlutterImageCompress.compressAndGetFile(
-      sourcePath,
-      imageFile.path,
-      minWidth: 2560,
-      minHeight: 2560,
-      quality: 88,
-      format: CompressFormat.jpeg,
-      keepExif: false,
-    );
-    if (compressed == null) {
-      throw StateError('图片压缩失败');
-    }
+    await File(sourcePath).copy(imageFile.path);
 
     final thumbnail = await FlutterImageCompress.compressAndGetFile(
-      compressed.path,
+      imageFile.path,
       thumbnailFile.path,
       minWidth: 320,
       minHeight: 320,
@@ -112,20 +106,12 @@ class ImageStorage {
       throw StateError('缩略图生成失败');
     }
 
-    final bytes = await imageFile.readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
     final support = await _supportRoot();
-    final result = StoredImage(
+    return StoredImage(
       imagePath: p.relative(imageFile.path, from: support),
       thumbnailPath: p.relative(thumbnailFile.path, from: support),
-      width: frame.image.width,
-      height: frame.image.height,
       sizeBytes: await imageFile.length(),
     );
-    frame.image.dispose();
-    codec.dispose();
-    return result;
   }
 
   /// 原样拷贝一份文件（PDF）。不做任何转码：报告文件必须和医院给的一致。

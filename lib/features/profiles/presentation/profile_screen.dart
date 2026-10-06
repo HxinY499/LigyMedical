@@ -4,6 +4,8 @@ import 'package:forui/forui.dart';
 
 import '../../../core/providers.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../indicators/presentation/indicator_edit_screen.dart';
+import '../../indicators/presentation/indicator_screen.dart';
 import '../../indicators/presentation/indicators_tab.dart';
 import '../../injections/presentation/injection_editor_screen.dart';
 import '../../injections/presentation/injection_plan_screen.dart';
@@ -11,6 +13,7 @@ import '../../injections/presentation/injections_tab.dart';
 import '../../records/presentation/record_editor_screen.dart';
 import '../../records/presentation/records_tab.dart';
 import 'profile_editor_screen.dart';
+import 'profile_theme.dart';
 
 enum ProfileTab {
   records('记录'),
@@ -37,16 +40,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _addRecord() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RecordEditorScreen(profileId: widget.profileId),
+      profileRoute<void>(
+        widget.profileId,
+        (_) => RecordEditorScreen(profileId: widget.profileId),
+      ),
+    );
+  }
+
+  /// 新建指标后直接进入它，接着就能添加数值。
+  Future<void> _addIndicator() async {
+    final navigator = Navigator.of(context);
+    final id = await navigator.push<String>(
+      profileRoute<String>(
+        widget.profileId,
+        (_) => IndicatorEditScreen(profileId: widget.profileId),
+      ),
+    );
+    if (id == null || !mounted) return;
+    navigator.push(
+      profileRoute<void>(
+        widget.profileId,
+        (_) => IndicatorScreen(profileId: widget.profileId, indicatorId: id),
       ),
     );
   }
 
   void _addInjection() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => InjectionEditorScreen(profileId: widget.profileId),
+      profileRoute<void>(
+        widget.profileId,
+        (_) => InjectionEditorScreen(profileId: widget.profileId),
       ),
     );
   }
@@ -84,8 +107,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: FLucideIcons.calendarCog,
               tooltip: '注射计划',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => InjectionPlanScreen(
+                profileRoute<void>(
+                  profile.id,
+                  (_) => InjectionPlanScreen(
                     profileId: profile.id,
                     plan: ref.read(injectionPlanProvider(profile.id)).value,
                   ),
@@ -132,7 +156,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onPressed: _addInjection,
           tooltip: '记录注射',
         ),
-        ProfileTab.indicators => null,
+        ProfileTab.indicators => AppFab(
+          onPressed: _addIndicator,
+          tooltip: '新建指标',
+        ),
       },
     );
   }

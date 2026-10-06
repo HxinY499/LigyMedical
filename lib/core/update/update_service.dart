@@ -47,7 +47,7 @@ class UpdateInfo {
 /// 这个方法原来返回可空的 [UpdateInfo]，`null` 同时表示四件事：已是最新、
 /// 网络失败、清单格式不认识、读不到本机版本号。
 ///
-/// 对**启动自动检查**来说这四种确实等价（都不该打扰正在记账的人），
+/// 对**启动自动检查**来说这四种确实等价（都不该打扰正在用应用的人），
 /// 所以那样写了很久也没出问题。但**手动检查**的语义正好相反：用户点那一下就是
 /// 在问「有没有新版本」，把「我没查到」答成「没有新版本」是给了一个假答案，
 /// 而且提示里还带着旧版本号——「当前已是最新版本 (v1.6.1)」在 1.7.0 已发布时
@@ -139,11 +139,14 @@ class UpdateCancelledException implements Exception {
 }
 
 /// OSS 上固定的更新清单地址。应用只硬编码这一条，APK 路径以清单为准。
+///
+/// 与 LigyTally 共用桶 `ligy-tally-releases`，放在 `medical/` 目录下。
+/// 这条地址一旦发版就不能再改：改了等于所有已安装版本都查不到更新。
 const kUpdateManifestUrl =
-    'https://ligy-tally-releases.oss-cn-hangzhou.aliyuncs.com/latest.json';
+    'https://ligy-tally-releases.oss-cn-hangzhou.aliyuncs.com/medical/latest.json';
 
 /// 解析 OSS 上的 `latest.json`。字段不对或校验值格式错误时返回 null，
-/// 调用方据此静默跳过，不打扰记账。
+/// 调用方据此静默跳过，不打扰使用。
 UpdateInfo? parseUpdateManifest(String source) {
   Object? decoded;
   try {
@@ -162,7 +165,7 @@ UpdateInfo? parseUpdateManifest(String source) {
   final uri = Uri.tryParse(apkUrl);
   if (uri == null || uri.scheme != 'https') return null;
 
-  final apkName = body['apk_name'] as String? ?? 'LigyTally-$version.apk';
+  final apkName = body['apk_name'] as String? ?? 'LigyMedical-$version.apk';
   if (!apkName.endsWith('.apk')) return null;
 
   String? sha256;
@@ -186,9 +189,9 @@ UpdateInfo? parseUpdateManifest(String source) {
 
 /// 应用内更新服务。
 ///
-/// 更新源是阿里云 OSS 桶 `ligy-tally-releases` 上的 [kUpdateManifestUrl]。
+/// 更新源是阿里云 OSS 上的 [kUpdateManifestUrl]。
 /// 设计原则：
-/// - 检查失败一律静默（无网络、格式变化都不该打扰记账）
+/// - 检查失败一律静默（无网络、格式变化都不该打扰使用）
 /// - 下载完成后必须校验 SHA-256，避免装上损坏的包
 /// - 安装动作交给系统安装器，本应用不静默安装
 class UpdateService {
@@ -196,7 +199,7 @@ class UpdateService {
 
   final http.Client _client;
 
-  static const _channel = MethodChannel('com.ligy.ligy_tally/app_update');
+  static const _channel = MethodChannel('com.ligy.ligy_medical/app_update');
 
   /// 记录用户选择「忽略」的版本号，之后启动时不再为该版本弹窗。
   static const _prefsIgnoredVersion = 'update.ignored_version';

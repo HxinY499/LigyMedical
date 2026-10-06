@@ -23,7 +23,7 @@ void main() {
   // 要 mock 原生 channel 与 SharedPreferences，两者都依赖已初始化的 binding。
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('com.ligy.ligy_tally/app_update');
+  const channel = MethodChannel('com.ligy.ligy_medical/app_update');
 
   /// 让原生 channel 报告一个版本号；[versionName] 为 null 时模拟读不到。
   void mockNativeVersion(String? versionName) {
@@ -38,10 +38,9 @@ void main() {
   String manifest({required String tag}) => jsonEncode({
     'tag_name': tag,
     'body': '## 更新内容\n\n- 一条说明',
-    'apk_name': 'LigyTally-${tag.substring(1)}.apk',
+    'apk_name': 'LigyMedical-${tag.substring(1)}.apk',
     'apk_url':
-        'https://github.com/HxinY499/LigyTally-Releases/releases/download/'
-        '$tag/LigyTally-${tag.substring(1)}.apk',
+        'https://releases.ligezhang.cn/medical/LigyMedical-${tag.substring(1)}.apk',
     'apk_size': 24516200,
     'sha256': 'a' * 64,
   });

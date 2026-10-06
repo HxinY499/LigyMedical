@@ -16,7 +16,7 @@ import 'update_service.dart';
 /// 2. 浮层已关掉但还在下载时，在状态栏下挂一颗不占布局的进度胶囊
 ///
 /// 用可下滑关掉的底部浮层，而不是 AlertDialog：更新不是必须马上处理
-/// 的事，拦住用户记账才是真的烦。下滑或点遮罩只收起，不写入「忽略」。
+/// 的事，拦住用户正在做的事才是真的烦。下滑或点遮罩只收起，不写入「忽略」。
 class UpdateNotificationLayer extends ConsumerStatefulWidget {
   const UpdateNotificationLayer({super.key, required this.child});
 

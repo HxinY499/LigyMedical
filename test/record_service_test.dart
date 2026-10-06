@@ -74,12 +74,76 @@ void main() {
     expect(series, hasLength(2));
   });
 
-  test('编辑时删掉的指标若无其他数据会被清理', () async {
+  test('记录里删掉某项指标，指标本身保留（可能是在指标页单独建的）', () async {
     final id = await service.save(
       draft(indicators: const [IndicatorInput(name: 'ESR', value: 2, unit: '')]),
     );
     await service.save(draft(id: id));
-    expect(await db.indicatorList('me'), isEmpty);
+    final series = await db.watchIndicatorSeries('me').first;
+    expect(series.single.indicator.name, 'ESR');
+    expect(series.single.points, isEmpty);
+  });
+
+  test('单独添加的数值与记录里的数值合在一条趋势线上，只有后者能跳记录', () async {
+    final indicatorId = await db.createIndicator(
+      id: 'esr',
+      profileId: 'me',
+      name: '血沉',
+      unit: 'mm/h',
+      refLow: null,
+      refHigh: 20,
+    );
+    expect(indicatorId, 'esr');
+    expect(
+      await db.createIndicator(
+        id: 'dup',
+        profileId: 'me',
+        name: '血沉',
+        unit: '',
+        refLow: null,
+        refHigh: null,
+      ),
+      isNull,
+      reason: '同名指标不能重复建',
+    );
+    await db.saveStandaloneValue(
+      id: 'v1',
+      indicatorId: 'esr',
+      date: '2026-03-01',
+      value: 4,
+    );
+    final recordId = await service.save(
+      draft(
+        date: '2026-04-26',
+        indicators: const [IndicatorInput(name: '血沉', value: 1, unit: '')],
+      ),
+    );
+
+    var points = (await db.watchOneSeries('me', 'esr').first)!.points;
+    expect(points.map((p) => p.date), ['2026-03-01', '2026-04-26']);
+    expect(points.map((p) => p.recordId), [null, recordId]);
+
+    // 改记录日期，它带来的数值日期跟着变。
+    await service.save(
+      draft(
+        id: recordId,
+        date: '2026-02-01',
+        indicators: const [IndicatorInput(name: '血沉', value: 1, unit: '')],
+      ),
+    );
+    points = (await db.watchOneSeries('me', 'esr').first)!.points;
+    expect(points.map((p) => p.date), ['2026-02-01', '2026-03-01']);
+
+    // 删记录只带走它自己的数值，单独添加的留下。
+    final record = (await db.watchRecord(recordId).first)!.record;
+    await service.delete(record);
+    points = (await db.watchOneSeries('me', 'esr').first)!.points;
+    expect(points.single.valueId, 'v1');
+
+    await db.deleteIndicatorValue('v1');
+    expect((await db.watchOneSeries('me', 'esr').first)!.points, isEmpty);
+    await db.deleteIndicator('esr');
+    expect(await db.watchOneSeries('me', 'esr').first, isNull);
   });
 
   test('改名为已有指标时合并数据', () async {
@@ -183,15 +247,6 @@ void main() {
       expect(nextInjectionDate(const [], 14), isNull);
     });
 
-    test('部位按轮换表循环建议', () {
-      const sites = ['左腹', '右腹', '左臂'];
-      expect(suggestSite(sites, '左腹'), '右腹');
-      expect(suggestSite(sites, '左臂'), '左腹');
-      expect(suggestSite(sites, '大腿'), '左腹');
-      expect(suggestSite(sites, null), '左腹');
-      expect(suggestSite(const [], '左腹'), isNull);
-    });
-
     test('预计注射日从最近一针起每隔一个间隔一直往后排', () {
       final last = DateTime(2026, 10, 5);
       expect(isProjectedInjectionDay(DateTime(2026, 10, 5), last, 14), isFalse);
@@ -201,7 +256,7 @@ void main() {
       expect(isProjectedInjectionDay(DateTime(2026, 10, 20), last, 14), isFalse);
       expect(isProjectedInjectionDay(DateTime(2026, 9, 21), last, 14), isFalse);
       expect(isProjectedInjectionDay(DateTime(2026, 10, 19), null, 14), isFalse);
-      // 跨夏令时 / 跨年不漂移：按日历日算，不按毫秒。
+      // 跨年不漂移：按日历日算，不按毫秒。
       expect(isProjectedInjectionDay(DateTime(2027, 1, 11), last, 14), isTrue);
     });
 

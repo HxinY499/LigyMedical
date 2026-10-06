@@ -7,11 +7,17 @@ import 'package:forui/forui.dart';
 import '../core/appearance/appearance.dart';
 import '../core/preferences/default_profile.dart';
 import '../core/theme/app_theme.dart';
+import '../core/update/update_banner.dart';
 import '../features/profiles/presentation/profile_screen.dart';
 import '../features/profiles/presentation/profiles_screen.dart';
+import '../features/profiles/presentation/profile_theme.dart';
 
 class LigyMedicalApp extends ConsumerWidget {
   const LigyMedicalApp({super.key});
+
+  /// 首页挂着更新提示层：启动检查在这里发起，发现新版本从这里弹浮层。
+  /// 启动档案压在它上面时浮层照样弹在最顶层。
+  static const _home = UpdateNotificationLayer(child: ProfilesScreen());
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,15 +40,15 @@ class LigyMedicalApp extends ConsumerWidget {
       // 设了启动档案时，初始栈直接是「列表 + 档案」两层：第一帧就是档案页，
       // 不会先闪一下列表再滑进去，返回仍回到列表。只在启动时读一次。
       // 与 `home` 互斥，所以首页也在这里给出。
-      onGenerateRoute: (_) =>
-          MaterialPageRoute<void>(builder: (_) => const ProfilesScreen()),
+      onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => _home),
       onGenerateInitialRoutes: (_) {
         final profileId = ref.read(defaultProfileProvider);
         return [
-          MaterialPageRoute<void>(builder: (_) => const ProfilesScreen()),
+          MaterialPageRoute<void>(builder: (_) => _home),
           if (profileId != null)
-            MaterialPageRoute<void>(
-              builder: (_) => ProfileScreen(profileId: profileId),
+            profileRoute<void>(
+              profileId,
+              (_) => ProfileScreen(profileId: profileId),
             ),
         ];
       },

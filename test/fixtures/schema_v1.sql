@@ -1,0 +1,15 @@
+CREATE TABLE "attachments" ("id" TEXT NOT NULL, "record_id" TEXT NOT NULL REFERENCES records (id) ON DELETE CASCADE, "kind" INTEGER NOT NULL, "path" TEXT NOT NULL, "thumbnail_path" TEXT NULL, "name" TEXT NOT NULL DEFAULT '', "size_bytes" INTEGER NOT NULL, "sort_order" INTEGER NOT NULL DEFAULT 0, "created_at" INTEGER NOT NULL, PRIMARY KEY ("id"));
+CREATE TABLE "field_defs" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "sort_order" INTEGER NOT NULL DEFAULT 0, "created_at" INTEGER NOT NULL, PRIMARY KEY ("id"));
+CREATE TABLE "field_values" ("record_id" TEXT NOT NULL REFERENCES records (id) ON DELETE CASCADE, "field_id" TEXT NOT NULL REFERENCES field_defs (id) ON DELETE CASCADE, "value" TEXT NOT NULL, PRIMARY KEY ("record_id", "field_id"));
+CREATE TABLE "indicator_values" ("id" TEXT NOT NULL, "record_id" TEXT NOT NULL REFERENCES records (id) ON DELETE CASCADE, "indicator_id" TEXT NOT NULL REFERENCES indicators (id) ON DELETE CASCADE, "value" REAL NOT NULL, "sort_order" INTEGER NOT NULL DEFAULT 0, PRIMARY KEY ("id"));
+CREATE TABLE "indicators" ("id" TEXT NOT NULL, "profile_id" TEXT NOT NULL REFERENCES profiles (id) ON DELETE CASCADE, "name" TEXT NOT NULL, "unit" TEXT NOT NULL DEFAULT '', "ref_low" REAL NULL, "ref_high" REAL NULL, "created_at" INTEGER NOT NULL, PRIMARY KEY ("id"), UNIQUE ("profile_id", "name"));
+CREATE TABLE "injection_plans" ("profile_id" TEXT NOT NULL REFERENCES profiles (id) ON DELETE CASCADE, "drug" TEXT NOT NULL DEFAULT '', "interval_days" INTEGER NOT NULL DEFAULT 14, "sites" TEXT NOT NULL DEFAULT '左腹
+右腹
+左臂
+右臂', "note" TEXT NOT NULL DEFAULT '', "updated_at" INTEGER NOT NULL, PRIMARY KEY ("profile_id"));
+CREATE TABLE "injections" ("id" TEXT NOT NULL, "profile_id" TEXT NOT NULL REFERENCES profiles (id) ON DELETE CASCADE, "date" TEXT NOT NULL, "drug" TEXT NOT NULL DEFAULT '', "site" TEXT NOT NULL DEFAULT '', "place" TEXT NOT NULL DEFAULT '', "note" TEXT NOT NULL DEFAULT '', "created_at" INTEGER NOT NULL, "updated_at" INTEGER NOT NULL, PRIMARY KEY ("id"));
+CREATE TABLE "profiles" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "color_index" INTEGER NOT NULL DEFAULT 0, "injection_enabled" INTEGER NOT NULL DEFAULT 0 CHECK ("injection_enabled" IN (0, 1)), "sort_order" INTEGER NOT NULL DEFAULT 0, "created_at" INTEGER NOT NULL, "updated_at" INTEGER NOT NULL, PRIMARY KEY ("id"));
+CREATE TABLE "records" ("id" TEXT NOT NULL, "profile_id" TEXT NOT NULL REFERENCES profiles (id) ON DELETE CASCADE, "kind" INTEGER NOT NULL DEFAULT 0, "date" TEXT NOT NULL, "hospital" TEXT NOT NULL DEFAULT '', "content" TEXT NOT NULL DEFAULT '', "created_at" INTEGER NOT NULL, "updated_at" INTEGER NOT NULL, PRIMARY KEY ("id"));
+CREATE INDEX idx_indicator_values_indicator ON indicator_values(indicator_id);
+CREATE INDEX idx_injections_profile_date ON injections(profile_id, date);
+CREATE INDEX idx_records_profile_date ON records(profile_id, date);

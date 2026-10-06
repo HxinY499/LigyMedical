@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/settings_widgets.dart';
 import 'profile_avatar.dart';
+import 'profile_theme.dart';
 
 class ProfileEditorScreen extends ConsumerStatefulWidget {
   const ProfileEditorScreen({super.key, this.profile});
@@ -82,9 +83,18 @@ class _ProfileEditorScreenState extends ConsumerState<ProfileEditorScreen> {
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
+  /// 整页套在当前选中的标识色里：边选颜色边能看到进入档案后的主题色。
   @override
   Widget build(BuildContext context) {
+    return ProfileTheme(
+      colorIndex: _colorIndex,
+      child: Builder(builder: _buildPage),
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     final colors = context.colors;
+    final brightness = Theme.of(context).brightness;
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       body: AppTopBar(
@@ -116,14 +126,14 @@ class _ProfileEditorScreenState extends ConsumerState<ProfileEditorScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    for (var i = 0; i < kProfileColors.length; i++)
+                    for (var i = 0; i < kProfileAccents.length; i++)
                       GestureDetector(
                         onTap: () => setState(() => _colorIndex = i),
                         child: Container(
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
-                            color: kProfileColors[i],
+                            color: profileColor(i, brightness),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: i == _colorIndex
@@ -133,10 +143,12 @@ class _ProfileEditorScreenState extends ConsumerState<ProfileEditorScreen> {
                             ),
                           ),
                           child: i == _colorIndex
-                              ? const Icon(
+                              ? Icon(
                                   FLucideIcons.check,
                                   size: 16,
-                                  color: Colors.white,
+                                  color: colors.isDark
+                                      ? colors.canvasBase
+                                      : Colors.white,
                                 )
                               : null,
                         ),

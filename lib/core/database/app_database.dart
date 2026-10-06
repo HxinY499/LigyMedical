@@ -9,7 +9,7 @@ class Profiles extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
 
-  /// [kProfileColors] 的下标。
+  /// [kProfileAccents] 的下标：档案标识色，也是进入该档案后的主题色。
   IntColumn get colorIndex => integer().withDefault(const Constant(0))();
 
   /// 是否在档案里显示「注射」模块。
@@ -115,13 +115,19 @@ class Indicators extends Table {
 }
 
 @DataClassName('IndicatorValueEntry')
+/// 指标的一次数值。可以来自某条记录（[recordId] 非空），也可以在指标页单独添加。
 class IndicatorValues extends Table {
   TextColumn get id => text()();
+
+  /// 来自哪条记录；单独添加的数值为 null。删记录时连带删掉它带来的数值。
   TextColumn get recordId =>
-      text().references(Records, #id, onDelete: KeyAction.cascade)();
+      text().nullable().references(Records, #id, onDelete: KeyAction.cascade)();
   TextColumn get indicatorId =>
       text().references(Indicators, #id, onDelete: KeyAction.cascade)();
   RealColumn get value => real()();
+
+  /// `yyyy-MM-dd`。来自记录的数值随记录日期同步（记录每次保存都会重写它的数值）。
+  TextColumn get date => text()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -136,7 +142,7 @@ class InjectionPlans extends Table {
   TextColumn get drug => text().withDefault(const Constant(''))();
   IntColumn get intervalDays => integer().withDefault(const Constant(14))();
 
-  /// 轮换部位，按轮换顺序以换行分隔。
+  /// 常用部位，按显示顺序以换行分隔。记录注射时作为快捷选项。
   TextColumn get sites =>
       text().withDefault(const Constant(kDefaultInjectionSites))();
   TextColumn get note => text().withDefault(const Constant(''))();
@@ -200,12 +206,16 @@ List<String> splitSites(String raw) => raw
 /// 指标的一个数据点：来自某条记录。
 class IndicatorPoint {
   const IndicatorPoint({
+    required this.valueId,
     required this.recordId,
     required this.date,
     required this.value,
   });
 
-  final String recordId;
+  final String valueId;
+
+  /// 来自哪条记录；单独添加的为 null。
+  final String? recordId;
 
   /// `yyyy-MM-dd`
   final String date;
@@ -290,6 +300,7 @@ class DataSnapshot {
   };
 
   factory DataSnapshot.fromJson(Map<String, Object?> json) {
+    _fillValueDates(json);
     List<T> rows<T>(String key, T Function(Map<String, dynamic>) parse) {
       final list = json[key];
       if (list is! List) throw FormatException('备份缺少 $key');
@@ -312,6 +323,22 @@ class DataSnapshot {
   }
 }
 
+/// 第 1 版备份里指标数值没有自己的日期（那时一律取所属记录的日期），按记录补上。
+void _fillValueDates(Map<String, Object?> json) {
+  final records = json['records'];
+  final values = json['indicatorValues'];
+  if (records is! List || values is! List) return;
+  final dates = {
+    for (final record in records)
+      if (record is Map) record['id']: record['date'],
+  };
+  for (final value in values) {
+    if (value is Map && value['date'] == null) {
+      value['date'] = dates[value['recordId']];
+    }
+  }
+}
+
 @DriftDatabase(
   tables: [
     Profiles,
@@ -331,7 +358,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -348,6 +375,28 @@ class AppDatabase extends _$AppDatabase {
         'CREATE INDEX idx_indicator_values_indicator '
         'ON indicator_values(indicator_id)',
       );
+    },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        // 指标数值可以不属于任何记录：record_id 改为可空，日期存在数值自己身上。
+        // 老数据的日期从所属记录取。重建表会丢掉手建的索引，补建一次。
+        await migrator.alterTable(
+          TableMigration(
+            indicatorValues,
+            newColumns: [indicatorValues.date],
+            columnTransformer: {
+              indicatorValues.date: const CustomExpression<String>(
+                '(SELECT date FROM records '
+                'WHERE records.id = indicator_values.record_id)',
+              ),
+            },
+          ),
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_indicator_values_indicator '
+          'ON indicator_values(indicator_id)',
+        );
+      }
     },
     beforeOpen: (_) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -476,7 +525,7 @@ class AppDatabase extends _$AppDatabase {
     for (final row in indicatorRows) {
       final value = row.readTable(indicatorValues);
       indicatorsByRecord
-          .putIfAbsent(value.recordId, () => [])
+          .putIfAbsent(value.recordId!, () => [])
           .add(
             RecordIndicator(indicator: row.readTable(indicators), value: value),
           );
@@ -589,62 +638,74 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  /// 档案下的指标及其全部数值（按日期升序）。还没有数值的指标也在内。
   Future<List<IndicatorSeries>> _loadSeries(
     String profileId, {
     String? indicatorId,
   }) async {
-    final query =
-        select(indicatorValues).join([
-            innerJoin(
-              indicators,
-              indicators.id.equalsExp(indicatorValues.indicatorId),
-            ),
-            innerJoin(records, records.id.equalsExp(indicatorValues.recordId)),
-          ])
-          ..where(indicators.profileId.equals(profileId))
-          ..orderBy([
-            OrderingTerm.asc(records.date),
-            OrderingTerm.asc(records.createdAt),
-          ]);
+    final indicatorQuery = select(indicators)
+      ..where((row) => row.profileId.equals(profileId));
     if (indicatorId != null) {
-      query.where(indicators.id.equals(indicatorId));
+      indicatorQuery.where((row) => row.id.equals(indicatorId));
     }
-    final rows = await query.get();
-    final byIndicator = <String, (IndicatorEntry, List<IndicatorPoint>)>{};
-    for (final row in rows) {
-      final indicator = row.readTable(indicators);
-      final value = row.readTable(indicatorValues);
-      final record = row.readTable(records);
-      byIndicator
-          .putIfAbsent(indicator.id, () => (indicator, []))
-          .$2
+    final indicatorRows = await indicatorQuery.get();
+    if (indicatorRows.isEmpty) return const [];
+
+    final valueRows =
+        await (select(indicatorValues)
+              ..where(
+                (row) => row.indicatorId.isIn([
+                  for (final indicator in indicatorRows) indicator.id,
+                ]),
+              )
+              ..orderBy([
+                (row) => OrderingTerm.asc(row.date),
+                (row) => OrderingTerm.asc(row.sortOrder),
+              ]))
+            .get();
+    final pointsByIndicator = <String, List<IndicatorPoint>>{};
+    for (final value in valueRows) {
+      pointsByIndicator
+          .putIfAbsent(value.indicatorId, () => [])
           .add(
             IndicatorPoint(
-              recordId: record.id,
-              date: record.date,
+              valueId: value.id,
+              recordId: value.recordId,
+              date: value.date,
               value: value.value,
             ),
           );
     }
     final series = [
-      for (final entry in byIndicator.values)
-        IndicatorSeries(indicator: entry.$1, points: entry.$2),
+      for (final indicator in indicatorRows)
+        IndicatorSeries(
+          indicator: indicator,
+          points: pointsByIndicator[indicator.id] ?? const [],
+        ),
     ];
-    // 最近测过的排前面：常看的指标总是最近查过的那几项。
-    series.sort((a, b) => b.points.last.date.compareTo(a.points.last.date));
+    // 最近测过的排前面：常看的指标总是最近查过的那几项。还没数据的排最后，按创建顺序。
+    series.sort((a, b) {
+      if (a.points.isEmpty || b.points.isEmpty) {
+        if (a.points.isEmpty && b.points.isEmpty) {
+          return a.indicator.createdAt.compareTo(b.indicator.createdAt);
+        }
+        return a.points.isEmpty ? 1 : -1;
+      }
+      return b.points.last.date.compareTo(a.points.last.date);
+    });
     return series;
   }
 
   Set<ResultSetImplementation> get _seriesTables => {
     indicators,
     indicatorValues,
-    records,
   };
 
   Stream<List<IndicatorSeries>> watchIndicatorSeries(String profileId) {
     return _watch(_seriesTables, () => _loadSeries(profileId));
   }
 
+  /// 指标被删掉（或合并进别的指标）时给 null。
   Stream<IndicatorSeries?> watchOneSeries(
     String profileId,
     String indicatorId,
@@ -653,6 +714,67 @@ class AppDatabase extends _$AppDatabase {
       final series = await _loadSeries(profileId, indicatorId: indicatorId);
       return series.isEmpty ? null : series.single;
     });
+  }
+
+  /// 新建指标。同一档案里已有同名指标时返回 null，不建。
+  Future<String?> createIndicator({
+    required String id,
+    required String profileId,
+    required String name,
+    required String unit,
+    required double? refLow,
+    required double? refHigh,
+  }) async {
+    final existing =
+        await (select(indicators)..where(
+              (row) => row.profileId.equals(profileId) & row.name.equals(name),
+            ))
+            .getSingleOrNull();
+    if (existing != null) return null;
+    await into(indicators).insert(
+      IndicatorsCompanion.insert(
+        id: id,
+        profileId: profileId,
+        name: name,
+        unit: Value(unit),
+        refLow: Value(refLow),
+        refHigh: Value(refHigh),
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+    return id;
+  }
+
+  /// 删除指标及它的全部数值，包括在记录里填写的那些。
+  Future<void> deleteIndicator(String id) {
+    return (delete(indicators)..where((row) => row.id.equals(id))).go();
+  }
+
+  Future<IndicatorValueEntry?> indicatorValue(String id) {
+    return (select(
+      indicatorValues,
+    )..where((row) => row.id.equals(id))).getSingleOrNull();
+  }
+
+  /// 在指标页单独添加或修改一次数值（不属于任何记录）。
+  Future<void> saveStandaloneValue({
+    required String id,
+    required String indicatorId,
+    required String date,
+    required double value,
+  }) {
+    return into(indicatorValues).insertOnConflictUpdate(
+      IndicatorValuesCompanion.insert(
+        id: id,
+        indicatorId: indicatorId,
+        value: value,
+        date: date,
+      ),
+    );
+  }
+
+  Future<void> deleteIndicatorValue(String id) {
+    return (delete(indicatorValues)..where((row) => row.id.equals(id))).go();
   }
 
   Future<void> updateIndicator({
@@ -698,15 +820,6 @@ class AppDatabase extends _$AppDatabase {
       await (delete(indicators)..where((row) => row.id.equals(id))).go();
       return target.id;
     });
-  }
-
-  /// 删掉没有任何数据点的指标。录错的名字不该一直留在自动补全里。
-  Future<void> pruneIndicators(String profileId) {
-    return customStatement(
-      'DELETE FROM indicators WHERE profile_id = ? AND id NOT IN '
-      '(SELECT DISTINCT indicator_id FROM indicator_values)',
-      [profileId],
-    );
   }
 
   // ------------------------------------------------------------------ 注射

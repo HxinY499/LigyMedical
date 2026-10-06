@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../application/indicator_range.dart';
 import 'indicator_chart.dart';
 import 'indicator_screen.dart';
+import '../../profiles/presentation/profile_theme.dart';
 
 /// 档案里所有填过数值的指标，最近测过的在前。
 class IndicatorsTab extends ConsumerWidget {
@@ -54,8 +55,9 @@ class IndicatorsTab extends ConsumerWidget {
                     _SeriesRow(
                       series: items[i],
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => IndicatorScreen(
+                        profileRoute<void>(
+                          profileId,
+                          (_) => IndicatorScreen(
                             profileId: profileId,
                             indicatorId: items[i].indicator.id,
                           ),
@@ -84,6 +86,9 @@ class _SeriesRow extends StatelessWidget {
     final colors = context.colors;
     final indicator = series.indicator;
     final points = series.points;
+    if (points.isEmpty) {
+      return _EmptySeriesRow(indicator: indicator, onTap: onTap);
+    }
     final latest = points.last;
     final previous = points.length > 1 ? points[points.length - 2] : null;
     final abnormal = isAbnormal(indicator, latest.value);
@@ -153,6 +158,53 @@ class _SeriesRow extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 新建了但还没填过数值的指标。
+class _EmptySeriesRow extends StatelessWidget {
+  const _EmptySeriesRow({required this.indicator, required this.onTap});
+
+  final IndicatorEntry indicator;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    indicator.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                      color: colors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '暂无数据',
+                    style: TextStyle(fontSize: 12, color: colors.inactive),
+                  ),
+                ],
+              ),
+            ),
+            Icon(FLucideIcons.chevronRight, size: 16, color: colors.faint),
           ],
         ),
       ),

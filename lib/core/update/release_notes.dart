@@ -46,8 +46,7 @@ List<ReleaseNoteItem> parseReleaseNoteItems(String? body) {
   if (bullets.isNotEmpty) return bullets;
 
   return [
-    for (final line in section.split(RegExp(r'\r?\n')))
-      ?_itemFromLine(line),
+    for (final line in section.split(RegExp(r'\r?\n'))) ?_itemFromLine(line),
   ];
 }
 
@@ -88,7 +87,7 @@ ReleaseNoteItem? _itemFromLine(String raw) {
   return _itemFromText(text);
 }
 
-/// `- 功能 记账时可记录位置` → 类型 + 去掉前缀的正文。
+/// `- 功能 记录支持添加 PDF 体检报告` → 类型 + 去掉前缀的正文。
 ///
 /// 只认单独成词的「功能 / 修复 / 优化」。`修复了启动闪退` 这种不算前缀，
 /// 整句原样展示，避免把普通句子吞掉第一个词。

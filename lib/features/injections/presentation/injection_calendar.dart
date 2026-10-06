@@ -6,10 +6,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/chinese_calendar.dart';
 import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/surface_card.dart';
-import '../../profiles/presentation/profile_avatar.dart';
 import '../application/injection_schedule.dart';
 
-/// 注射月历：打过针的日子按部位着色，预计注射日画空心圈。
+/// 注射月历：打过针的日子画实心圈，预计注射日画空心圈。
 ///
 /// 预计日从最近一次实际注射起每隔一个间隔往后排，翻到哪个月都有。
 /// 格子下方是阴历 / 节日 / 节气，右上角标法定节假日的「休」「班」。
@@ -18,7 +17,6 @@ class InjectionCalendar extends StatefulWidget {
   const InjectionCalendar({
     super.key,
     required this.injections,
-    required this.sites,
     required this.intervalDays,
     required this.onTapInjection,
     required this.onTapEmptyDay,
@@ -26,7 +24,6 @@ class InjectionCalendar extends StatefulWidget {
 
   /// 按日期倒序。
   final List<InjectionEntry> injections;
-  final List<String> sites;
   final int intervalDays;
   final ValueChanged<InjectionEntry> onTapInjection;
   final ValueChanged<DateTime> onTapEmptyDay;
@@ -55,12 +52,6 @@ class _InjectionCalendarState extends State<InjectionCalendar> {
 
   void _shift(int delta) {
     setState(() => _month = DateTime(_month.year, _month.month + delta));
-  }
-
-  Color _siteColor(String site) {
-    final index = widget.sites.indexOf(site);
-    if (index < 0) return context.colors.muted;
-    return kProfileColors[index % kProfileColors.length];
   }
 
   @override
@@ -93,11 +84,6 @@ class _InjectionCalendarState extends State<InjectionCalendar> {
       if (doneCount > 0) '已打 $doneCount 针',
       if (projectedCount > 0) '预计 $projectedCount 针',
     ].join(' · ');
-    final usedSites = {
-      for (final entry in widget.injections)
-        if (entry.date.startsWith(monthPrefix) && entry.site.isNotEmpty)
-          entry.site,
-    };
 
     return SurfaceCard(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
@@ -178,8 +164,7 @@ class _InjectionCalendarState extends State<InjectionCalendar> {
               runSpacing: 6,
               alignment: WrapAlignment.center,
               children: [
-                for (final site in widget.sites.where(usedSites.contains))
-                  _Legend(color: _siteColor(site), label: site),
+                if (doneCount > 0) _Legend(color: colors.primary, label: '已打'),
                 if (projectedCount > 0)
                   _Legend(color: colors.primary, label: '预计', hollow: true),
               ],
@@ -207,23 +192,26 @@ class _InjectionCalendarState extends State<InjectionCalendar> {
         isProjectedInjectionDay(day, _last, widget.intervalDays);
     final overdue = projected && day.isBefore(today);
     final isToday = day == today;
-    final siteColor = entry == null ? null : _siteColor(entry.site);
     final info = chineseDayInfo(day);
     final ringColor = overdue ? colors.danger : colors.primary;
 
     final Widget circle;
-    if (siteColor != null) {
+    if (entry != null) {
       circle = Container(
         width: 30,
         height: 30,
-        decoration: BoxDecoration(color: siteColor, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: colors.primary,
+          shape: BoxShape.circle,
+        ),
         alignment: Alignment.center,
         child: Text(
           '$dayNumber',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            // 深色下主色被提亮，白字对比不够，与悬浮按钮同一条规则。
+            color: colors.isDark ? colors.canvasBase : Colors.white,
           ),
         ),
       );
@@ -253,18 +241,8 @@ class _InjectionCalendarState extends State<InjectionCalendar> {
       );
     }
 
-    final String caption;
-    final Color captionColor;
-    if (entry != null && entry.site.isNotEmpty) {
-      caption = entry.site;
-      captionColor = siteColor!;
-    } else if (info.isFestival) {
-      caption = info.label;
-      captionColor = colors.danger;
-    } else {
-      caption = info.label;
-      captionColor = colors.inactive;
-    }
+    final caption = info.label;
+    final captionColor = info.isFestival ? colors.danger : colors.inactive;
 
     return InkWell(
       onTap: () => entry == null

@@ -30,8 +30,10 @@ class BackupService {
   final AppDatabase database;
   final ImageStorage imageStorage;
 
-  static const formatVersion = 1;
-  static const _supportedVersions = {formatVersion};
+  /// - v1 → v2：指标数值可以不属于记录，多了自己的 `date`。v1 的包照样能恢复，
+  ///   缺的日期按所属记录补（见 `DataSnapshot.fromJson`）。
+  static const formatVersion = 2;
+  static const _supportedVersions = {1, formatVersion};
   static const _format = 'ligy-medical-backup';
   static const fileExtension = 'ligymedical';
 

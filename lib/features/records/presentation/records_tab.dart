@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../indicators/application/indicator_range.dart';
 import 'record_detail_screen.dart';
 import 'record_widgets.dart';
+import '../../profiles/presentation/profile_theme.dart';
 
 /// 档案的记录时间线：按月分组，每月一张卡，月内记录用发丝线分隔。
 class RecordsTab extends ConsumerStatefulWidget {
@@ -153,8 +154,9 @@ class RecordRow extends StatelessWidget {
         : record.recordKind.label;
     return InkWell(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => RecordDetailScreen(recordId: record.id),
+        profileRoute<void>(
+          record.profileId,
+          (_) => RecordDetailScreen(recordId: record.id),
         ),
       ),
       child: Padding(

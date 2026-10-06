@@ -12,6 +12,7 @@ import '../../../shared/widgets/settings_widgets.dart';
 import '../application/injection_schedule.dart';
 import 'injection_calendar.dart';
 import 'injection_editor_screen.dart';
+import '../../profiles/presentation/profile_theme.dart';
 
 enum _View { list, calendar }
 
@@ -29,8 +30,9 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
 
   void _openEditor({InjectionEntry? entry, DateTime? date}) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => InjectionEditorScreen(
+      profileRoute<void>(
+        widget.profileId,
+        (_) => InjectionEditorScreen(
           profileId: widget.profileId,
           entry: entry,
           initialDate: date,
@@ -50,18 +52,13 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
     }
     final plan = planAsync.value;
     final interval = plan?.intervalDays ?? 14;
-    final sites = plan?.siteList ?? splitSites(kDefaultInjectionSites);
     final next = nextInjectionDate(injections, interval);
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList.list(
         children: [
-          _SummaryCard(
-            plan: plan,
-            next: next,
-            suggestedSite: suggestSite(sites, injections.firstOrNull?.site),
-          ),
+          _SummaryCard(plan: plan, next: next),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 20, 0, 8),
             child: Row(
@@ -98,7 +95,6 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
           if (_view == _View.calendar)
             InjectionCalendar(
               injections: injections,
-              sites: sites,
               intervalDays: interval,
               onTapInjection: (entry) => _openEditor(entry: entry),
               onTapEmptyDay: (date) => _openEditor(date: date),
@@ -106,48 +102,70 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
           else if (injections.isEmpty)
             const EmptyState(icon: FLucideIcons.syringe, title: '还没有注射记录')
           else
-            SurfaceCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  for (var i = 0; i < injections.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        indent: 68,
-                        color: colors.lineSoft,
-                      ),
-                    _InjectionRow(
-                      entry: injections[i],
-                      number: injections.length - i,
-                      intervalDays: intervalBefore(injections, i),
-                      planInterval: interval,
-                      onTap: () => _openEditor(entry: injections[i]),
-                    ),
-                  ],
-                ],
+            for (final (year, indexes) in _groupByYear(injections)) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                child: Text(
+                  '$year年 · ${indexes.length} 针',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.muted,
+                  ),
+                ),
               ),
-            ),
+              SurfaceCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (final i in indexes) ...[
+                      if (i != indexes.first)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          indent: 68,
+                          color: colors.lineSoft,
+                        ),
+                      // 序号与间隔按全部历史算，不按年重置：年初第一针的间隔
+                      // 仍是距去年最后一针的天数。
+                      _InjectionRow(
+                        entry: injections[i],
+                        number: injections.length - i,
+                        intervalDays: intervalBefore(injections, i),
+                        planInterval: interval,
+                        onTap: () => _openEditor(entry: injections[i]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
         ],
       ),
     );
   }
 }
 
+/// 按年分组，返回（年份, 该年各针在 [latestFirst] 里的下标）。顺序沿用日期倒序。
+List<(String, List<int>)> _groupByYear(List<InjectionEntry> latestFirst) {
+  final groups = <(String, List<int>)>[];
+  for (var i = 0; i < latestFirst.length; i++) {
+    final year = latestFirst[i].date.substring(0, 4);
+    if (groups.isEmpty || groups.last.$1 != year) groups.add((year, []));
+    groups.last.$2.add(i);
+  }
+  return groups;
+}
+
 /// 下次注射概要：全部左对齐，只有大日期一个视觉重点。
 ///
 /// 记录注射走页面右下角的 + 号，计划设置走页头图标，卡里不再放按钮。
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.plan,
-    required this.next,
-    required this.suggestedSite,
-  });
+  const _SummaryCard({required this.plan, required this.next});
 
   final InjectionPlanEntry? plan;
   final DateTime? next;
-  final String? suggestedSite;
 
   @override
   Widget build(BuildContext context) {
@@ -156,10 +174,7 @@ class _SummaryCard extends StatelessWidget {
     final overdue = next != null && next.isBefore(dateOnly(DateTime.now()));
     final drug = plan?.drug ?? '';
     final note = plan?.note ?? '';
-    final details = [
-      if (suggestedSite != null) '建议$suggestedSite',
-      '每${plan?.intervalDays ?? 14}天',
-    ].join(' · ');
+    final details = '每${plan?.intervalDays ?? 14}天';
     return SurfaceCard(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       child: Column(
@@ -254,7 +269,10 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-/// 一针：与记录列表同一套行版式——左侧日期栏，中间部位 / 地点，右侧序号与间隔。
+/// 一针：与记录列表同一套行版式——左侧日期栏，中间药品 / 执行人 · 部位 / 备注，
+/// 右侧序号与间隔。
+///
+/// 备注放进浅灰底的小块：前两行是这一针的属性，备注是另写的话，换个容器才分得开。
 class _InjectionRow extends StatelessWidget {
   const _InjectionRow({
     required this.entry,
@@ -276,9 +294,10 @@ class _InjectionRow extends StatelessWidget {
     final date = dateFromKey(entry.date);
     final interval = intervalDays;
     final late = interval != null && interval > planInterval;
-    final title = [
-      if (entry.site.isNotEmpty) entry.site,
+    final title = entry.drug.isNotEmpty ? entry.drug : '注射';
+    final subtitle = [
       if (entry.place.isNotEmpty) entry.place,
+      if (entry.site.isNotEmpty) entry.site,
     ].join(' · ');
     return InkWell(
       onTap: onTap,
@@ -313,9 +332,7 @@ class _InjectionRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title.isEmpty
-                        ? (entry.drug.isEmpty ? '注射' : entry.drug)
-                        : title,
+                    title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -325,20 +342,28 @@ class _InjectionRow extends StatelessWidget {
                       color: colors.ink,
                     ),
                   ),
-                  if (title.isNotEmpty && entry.drug.isNotEmpty)
+                  if (subtitle.isNotEmpty)
                     Text(
-                      entry.drug,
+                      subtitle,
                       style: TextStyle(fontSize: 13, color: colors.muted),
                     ),
                   if (entry.note.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.fill,
+                        borderRadius: context.radii.chipAll,
+                      ),
                       child: Text(
                         entry.note,
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.45,
-                          color: colors.muted,
+                          color: colors.ink,
                         ),
                       ),
                     ),

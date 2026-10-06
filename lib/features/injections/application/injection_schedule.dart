@@ -25,15 +25,6 @@ bool isProjectedInjectionDay(
   return days > 0 && days % intervalDays == 0;
 }
 
-/// 按轮换顺序给出下一个部位：上次部位的下一个，循环。
-///
-/// 上次部位不在轮换表里（改过计划、或手填了别的）就从头开始。
-String? suggestSite(List<String> sites, String? lastSite) {
-  if (sites.isEmpty) return null;
-  final index = lastSite == null ? -1 : sites.indexOf(lastSite);
-  return sites[(index + 1) % sites.length];
-}
-
 /// 与上一针的间隔天数。[latestFirst] 须按日期倒序；最早那一针返回 null。
 int? intervalBefore(List<InjectionEntry> latestFirst, int index) {
   if (index + 1 >= latestFirst.length) return null;

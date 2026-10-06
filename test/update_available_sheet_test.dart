@@ -51,7 +51,7 @@ UpdateInfo _info({String? notes, int size = 57 * 1024 * 1024}) {
     version: const AppVersion(1, 5, 2),
     tagName: 'v1.5.2',
     apkUrl: 'https://example.com/app.apk',
-    apkName: 'LigyTally-1.5.2.apk',
+    apkName: 'LigyMedical-1.5.2.apk',
     apkSize: size,
     releaseNotes: notes,
   );
@@ -87,8 +87,8 @@ void main() {
             notes: '''
 ## 更新内容
 
-- 功能 记账时可记录位置
-- 地点可改成店名
+- 功能 记录支持添加 PDF 体检报告
+- 注射日历显示阴历和节假日
 ''',
           ),
         );
@@ -99,9 +99,9 @@ void main() {
 
     expect(find.text('发现新版本'), findsOneWidget);
     expect(find.text('v1.5.2 · 57MB'), findsOneWidget);
-    expect(find.text('记账时可记录位置'), findsOneWidget);
-    expect(find.text('功能 记账时可记录位置'), findsNothing);
-    expect(find.text('地点可改成店名'), findsOneWidget);
+    expect(find.text('记录支持添加 PDF 体检报告'), findsOneWidget);
+    expect(find.text('功能 记录支持添加 PDF 体检报告'), findsNothing);
+    expect(find.text('注射日历显示阴历和节假日'), findsOneWidget);
     expect(find.byIcon(FLucideIcons.sparkles), findsOneWidget);
     expect(find.text('忽略'), findsOneWidget);
     expect(find.text('更新'), findsOneWidget);

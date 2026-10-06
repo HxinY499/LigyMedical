@@ -171,10 +171,10 @@ class _RecordEditorScreenState extends ConsumerState<RecordEditorScreen> {
     try {
       final List<XFile> picked;
       if (source == ImageSource.camera) {
-        final shot = await _picker.pickImage(source: source, imageQuality: 100);
+        final shot = await _picker.pickImage(source: source);
         picked = shot == null ? const [] : [shot];
       } else {
-        picked = await _picker.pickMultiImage(imageQuality: 100);
+        picked = await _picker.pickMultiImage();
       }
       if (picked.isEmpty || !mounted) return;
       setState(() {

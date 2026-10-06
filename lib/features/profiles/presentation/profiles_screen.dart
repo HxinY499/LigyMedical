@@ -13,6 +13,7 @@ import '../../settings/presentation/settings_screen.dart';
 import 'profile_avatar.dart';
 import 'profile_editor_screen.dart';
 import 'profile_screen.dart';
+import 'profile_theme.dart';
 
 /// 首页：全部档案。
 class ProfilesScreen extends ConsumerWidget {
@@ -106,8 +107,9 @@ class _ProfileCard extends ConsumerWidget {
     return SurfaceCard(
       padding: EdgeInsets.zero,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ProfileScreen(profileId: profile.id),
+        profileRoute<void>(
+          profile.id,
+          (_) => ProfileScreen(profileId: profile.id),
         ),
       ),
       child: Column(

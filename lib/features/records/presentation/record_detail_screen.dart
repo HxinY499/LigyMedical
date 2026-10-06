@@ -17,6 +17,7 @@ import '../../indicators/application/indicator_range.dart';
 import '../../indicators/presentation/indicator_screen.dart';
 import 'record_editor_screen.dart';
 import 'record_widgets.dart';
+import '../../profiles/presentation/profile_theme.dart';
 
 class RecordDetailScreen extends ConsumerWidget {
   const RecordDetailScreen({super.key, required this.recordId});
@@ -69,8 +70,9 @@ class RecordDetailScreen extends ConsumerWidget {
             icon: FLucideIcons.pencil,
             tooltip: '编辑',
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => RecordEditorScreen(
+              profileRoute<void>(
+                record.profileId,
+                (_) => RecordEditorScreen(
                   profileId: record.profileId,
                   bundle: bundle,
                 ),
@@ -169,8 +171,9 @@ class RecordDetailScreen extends ConsumerWidget {
                           _IndicatorRow(
                             item: bundle.indicators[i],
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => IndicatorScreen(
+                              profileRoute<void>(
+                                record.profileId,
+                                (_) => IndicatorScreen(
                                   profileId: record.profileId,
                                   indicatorId:
                                       bundle.indicators[i].indicator.id,

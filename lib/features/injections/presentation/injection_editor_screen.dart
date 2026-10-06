@@ -7,7 +7,6 @@ import '../../../core/database/app_database.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../application/injection_schedule.dart';
 
 class InjectionEditorScreen extends ConsumerStatefulWidget {
   const InjectionEditorScreen({
@@ -38,7 +37,7 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
   String? _site;
   List<String> _recentPlaces = const [];
 
-  /// 新建时的药品与部位默认值要等计划和历史读出来才填得上，只填一次。
+  /// 新建时的药品默认值要等计划和历史读出来才填得上，只填一次。
   bool _seeded = false;
   bool _saving = false;
 
@@ -77,14 +76,12 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
   void _seedDefaults(
     InjectionPlanEntry? plan,
     List<InjectionEntry> injections,
-    List<String> sites,
   ) {
     if (_seeded) return;
     _seeded = true;
     final last = injections.firstOrNull;
     final drug = (plan?.drug ?? '').isNotEmpty ? plan!.drug : last?.drug ?? '';
     _drug.text = drug;
-    _site = suggestSite(sites, last?.site);
   }
 
   Future<void> _save() async {
@@ -132,15 +129,9 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
     final plan = planAsync.value;
     final sites = plan?.siteList ?? splitSites(kDefaultInjectionSites);
     if (!planAsync.isLoading && injections != null) {
-      _seedDefaults(plan, injections, sites);
+      _seedDefaults(plan, injections);
     }
-    final others = injections
-        ?.where((entry) => entry.id != widget.entry?.id)
-        .toList();
-    final suggested = others == null
-        ? null
-        : suggestSite(sites, others.firstOrNull?.site);
-    // 手填过不在轮换表里的部位（改过计划）时也要能看到并保留它。
+    // 记录里的部位不在计划的常用部位里（改过计划）时也要能看到并保留它。
     final siteOptions = [
       ...sites,
       if (_site != null && !sites.contains(_site)) _site!,
@@ -174,7 +165,6 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
                 ChoiceChips(
                   labels: siteOptions,
                   selected: _site,
-                  highlighted: suggested,
                   onTap: (site) =>
                       setState(() => _site = _site == site ? null : site),
                 ),
