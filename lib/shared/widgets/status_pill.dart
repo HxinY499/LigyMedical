@@ -16,7 +16,7 @@ class StatusPill extends StatelessWidget {
   final String label;
   final StatusTone tone;
 
-  /// 紧凑档：列表行里的类型标签用。
+  /// 紧凑档：标题旁的类型标签用，圆角小方块而不是胶囊。
   final bool dense;
 
   @override
@@ -25,26 +25,30 @@ class StatusPill extends StatelessWidget {
     final (background, foreground) = switch (tone) {
       StatusTone.primary => (colors.primarySoft, colors.primary),
       StatusTone.danger => (colors.dangerSoft, colors.danger),
+      // 琥珀字压在琥珀浅底上对比太弱，字往墨色压一档。
       StatusTone.accent => (
         colors.accent.withValues(alpha: colors.isDark ? 0.2 : 0.14),
-        colors.accent,
+        colors.isDark ? colors.accent : Color.lerp(colors.accent, colors.ink, 0.3)!,
       ),
       StatusTone.neutral => (colors.fill, colors.muted),
     };
     return Container(
       padding: dense
-          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5)
-          : const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+          : const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(dense ? 6 : 999),
       ),
       child: Text(
         label,
+        // 行高钉成 1 且行距上下均分：中文落在西文字体的行框里时，默认把多出的
+        // 行距大半分给上方，字会偏下，上留白比下留白大。
         style: TextStyle(
-          fontSize: dense ? 11 : 12.5,
-          fontWeight: FontWeight.w700,
-          height: 1.2,
+          fontSize: dense ? 11.5 : 12.5,
+          fontWeight: FontWeight.w600,
+          height: 1,
+          leadingDistribution: TextLeadingDistribution.even,
           color: foreground,
         ),
       ),

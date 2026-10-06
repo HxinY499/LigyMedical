@@ -319,7 +319,7 @@ class _ImageGrid extends StatelessWidget {
   }
 }
 
-/// PDF 附件行。
+/// PDF 附件行。扁平白底，与页面上其余卡片一致，不加描边。
 class PdfTile extends StatelessWidget {
   const PdfTile({
     super.key,
@@ -340,7 +340,8 @@ class PdfTile extends StatelessWidget {
     final size = sizeBytes;
     return Material(
       color: colors.surface,
-      shape: context.radii.blockShape(side: BorderSide(color: colors.line)),
+      // 与内容卡片同一套：白底、无描边、卡片圆角。
+      shape: context.radii.cardShape(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

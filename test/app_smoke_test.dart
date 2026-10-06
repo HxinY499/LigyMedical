@@ -246,6 +246,59 @@ void main() {
     }
   });
 
+  testWidgets('档案页左右滑动切换标签', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await tester.runAsync(() => _seed(db));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          appearanceProvider.overrideWith(
+            () => AppearanceController.seeded(AppearanceConfig.initial),
+          ),
+        ],
+        child: const LigyMedicalApp(),
+      ),
+    );
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle();
+    await tester.tap(find.text('我').last);
+    await settle();
+    expect(find.byTooltip('新建记录'), findsOneWidget);
+
+    // 悬浮按钮跟着标签变，用它判断当前在哪一页。
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1500);
+    await settle();
+    expect(find.byTooltip('新建指标'), findsOneWidget);
+
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1500);
+    await settle();
+    expect(find.byTooltip('记录注射'), findsOneWidget);
+
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1500);
+    await settle();
+    expect(find.byTooltip('新建指标'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  });
+
   testWidgets('设了启动档案时直接进入该档案，返回回到列表', (tester) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;

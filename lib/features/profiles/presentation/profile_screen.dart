@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../indicators/presentation/indicator_edit_screen.dart';
 import '../../indicators/presentation/indicator_screen.dart';
@@ -36,7 +37,24 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  ProfileTab _tab = ProfileTab.records;
+  final PageController _pages = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  /// 点标签：页面滑过去，标签在 [PageView.onPageChanged] 里跟着更新。
+  void _goTo(int index) {
+    setState(() => _index = index);
+    _pages.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   void _addRecord() {
     Navigator.of(context).push(
@@ -97,57 +115,99 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (profile.injectionEnabled) ProfileTab.injections,
     ];
     // 关掉注射模块后，停在注射页的状态要退回记录页。
-    final tab = tabs.contains(_tab) ? _tab : ProfileTab.records;
+    if (_index >= tabs.length) {
+      _index = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pages.hasClients) _pages.jumpToPage(0);
+      });
+    }
+    final tab = tabs[_index];
+    final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      body: AppTopBar(
-        title: profile.name,
-        actions: [
-          if (tab == ProfileTab.injections)
-            AppHeaderAction(
-              icon: FLucideIcons.calendarCog,
-              tooltip: '注射计划',
-              onTap: () => Navigator.of(context).push(
-                profileRoute<void>(
-                  profile.id,
-                  (_) => InjectionPlanScreen(
-                    profileId: profile.id,
-                    plan: ref.read(injectionPlanProvider(profile.id)).value,
-                  ),
+      body: Material(
+        color: context.colors.canvas,
+        child: Column(
+          children: [
+            // 页头与标签固定在上方，下面的各页左右滑动、各自上下滚动。
+            CustomScrollView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              slivers: [
+                AppHeaderSliver(
+                  title: profile.name,
+                  showBack: Navigator.of(context).canPop(),
+                  collapsible: false,
+                  actions: [
+                    if (tab == ProfileTab.injections)
+                      AppHeaderAction(
+                        icon: FLucideIcons.calendarCog,
+                        tooltip: '注射计划',
+                        onTap: () => Navigator.of(context).push(
+                          profileRoute<void>(
+                            profile.id,
+                            (_) => InjectionPlanScreen(
+                              profileId: profile.id,
+                              plan: ref
+                                  .read(injectionPlanProvider(profile.id))
+                                  .value,
+                            ),
+                          ),
+                        ),
+                      ),
+                    AppHeaderAction(
+                      icon: FLucideIcons.userPen,
+                      tooltip: '编辑档案',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ProfileEditorScreen(profile: profile),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ),
-          AppHeaderAction(
-            icon: FLucideIcons.userPen,
-            tooltip: '编辑档案',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ProfileEditorScreen(profile: profile),
-              ),
-            ),
-          ),
-        ],
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            sliver: SliverToBoxAdapter(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: AppTabs<ProfileTab>(
                 values: tabs,
                 labelOf: (value) => value.label,
                 selected: tab,
-                onChanged: (value) => setState(() => _tab = value),
+                onChanged: (value) => _goTo(tabs.indexOf(value)),
               ),
             ),
-          ),
-          switch (tab) {
-            ProfileTab.records => RecordsTab(profileId: profile.id),
-            ProfileTab.indicators => IndicatorsTab(profileId: profile.id),
-            ProfileTab.injections => InjectionsTab(profileId: profile.id),
-          },
-          // 给悬浮按钮让出位置，最后一张卡不被挡住。
-          SliverToBoxAdapter(
-            child: SizedBox(height: 96 + MediaQuery.paddingOf(context).bottom),
-          ),
-        ],
+            Expanded(
+              child: PageView(
+                controller: _pages,
+                onPageChanged: (index) => setState(() => _index = index),
+                children: [
+                  for (final page in tabs)
+                    _KeepAlivePage(
+                      child: CustomScrollView(
+                        slivers: [
+                          switch (page) {
+                            ProfileTab.records => RecordsTab(
+                              profileId: profile.id,
+                            ),
+                            ProfileTab.indicators => IndicatorsTab(
+                              profileId: profile.id,
+                            ),
+                            ProfileTab.injections => InjectionsTab(
+                              profileId: profile.id,
+                            ),
+                          },
+                          // 给悬浮按钮让出位置，最后一张卡不被挡住。
+                          SliverToBoxAdapter(
+                            child: SizedBox(height: 96 + bottom),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: switch (tab) {
@@ -162,5 +222,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       },
     );
+  }
+}
+
+/// 让翻走的页面保留状态（滚动位置、筛选、列表 / 日历视图），翻回来还在原处。
+class _KeepAlivePage extends StatefulWidget {
+  const _KeepAlivePage({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
