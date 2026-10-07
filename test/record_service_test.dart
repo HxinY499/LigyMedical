@@ -76,7 +76,9 @@ void main() {
 
   test('记录里删掉某项指标，指标本身保留（可能是在指标页单独建的）', () async {
     final id = await service.save(
-      draft(indicators: const [IndicatorInput(name: 'ESR', value: 2, unit: '')]),
+      draft(
+        indicators: const [IndicatorInput(name: 'ESR', value: 2, unit: '')],
+      ),
     );
     await service.save(draft(id: id));
     final series = await db.watchIndicatorSeries('me').first;
@@ -172,8 +174,7 @@ void main() {
   });
 
   test('PDF 附件落盘，删除记录时文件与数据一起清掉', () async {
-    final source = File('${root.path}/report.pdf')
-      ..writeAsBytesSync([1, 2, 3]);
+    final source = File('${root.path}/report.pdf')..writeAsBytesSync([1, 2, 3]);
     final id = await service.save(
       draft(
         pending: [
@@ -212,6 +213,38 @@ void main() {
     await service.save(draft(id: id));
     expect((await db.watchRecord(id).first)!.attachments, isEmpty);
     expect(File('${root.path}/${pdf.path}').existsSync(), isFalse);
+  });
+
+  test('附件名称：新附件按给的名称存，编辑时改名、清空都会写回', () async {
+    final source = File('${root.path}/scan.pdf')..writeAsBytesSync([1]);
+    final id = await service.save(
+      draft(
+        pending: [
+          PendingAttachment(
+            kind: AttachmentKind.pdf,
+            sourcePath: source.path,
+            name: 'scan.pdf',
+          ).rename('血常规'),
+        ],
+      ),
+    );
+    final pdf = (await db.watchRecord(id).first)!.attachments.single;
+    expect(pdf.name, '血常规');
+
+    await service.save(
+      draft(
+        id: id,
+        kept: [pdf.copyWith(name: '血常规 4月')],
+      ),
+    );
+    expect((await db.watchRecord(id).first)!.attachments.single.name, '血常规 4月');
+    await service.save(
+      draft(
+        id: id,
+        kept: [pdf.copyWith(name: '')],
+      ),
+    );
+    expect((await db.watchRecord(id).first)!.attachments.single.name, '');
   });
 
   test('自定义字段只存非空值，删字段级联删值', () async {
@@ -253,9 +286,15 @@ void main() {
       expect(isProjectedInjectionDay(DateTime(2026, 10, 19), last, 14), isTrue);
       expect(isProjectedInjectionDay(DateTime(2026, 11, 2), last, 14), isTrue);
       expect(isProjectedInjectionDay(DateTime(2027, 3, 22), last, 14), isTrue);
-      expect(isProjectedInjectionDay(DateTime(2026, 10, 20), last, 14), isFalse);
+      expect(
+        isProjectedInjectionDay(DateTime(2026, 10, 20), last, 14),
+        isFalse,
+      );
       expect(isProjectedInjectionDay(DateTime(2026, 9, 21), last, 14), isFalse);
-      expect(isProjectedInjectionDay(DateTime(2026, 10, 19), null, 14), isFalse);
+      expect(
+        isProjectedInjectionDay(DateTime(2026, 10, 19), null, 14),
+        isFalse,
+      );
       // 跨年不漂移：按日历日算，不按毫秒。
       expect(isProjectedInjectionDay(DateTime(2027, 1, 11), last, 14), isTrue);
     });

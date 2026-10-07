@@ -19,7 +19,7 @@ import '../media/image_storage.dart';
 /// ```text
 /// manifest.json   格式、版本、各类条数
 /// data.json       全库快照（见 [DataSnapshot]）
-/// files/media/... 附件原文件与缩略图，路径与 support 目录下一致
+/// files/media/... 附件、注射照片的原文件与缩略图，路径与 support 目录下一致
 /// ```
 ///
 /// 恢复是**整体覆盖**，不做合并：两份数据里同一次就诊可能各改过一遍，
@@ -32,8 +32,13 @@ class BackupService {
 
   /// - v1 → v2：指标数值可以不属于记录，多了自己的 `date`。v1 的包照样能恢复，
   ///   缺的日期按所属记录补（见 `DataSnapshot.fromJson`）。
-  static const formatVersion = 2;
-  static const _supportedVersions = {1, formatVersion};
+  /// - v2 → v3：多了注射照片 `injectionPhotos`。老包没有这一项，按空恢复；
+  ///   老版本应用拒收 v3，免得恢复时把照片悄悄丢掉。
+  /// - v3 → v4：多了药品列表 `drugs`，计划改存 `drugId`。老包按计划和注射记录里的
+  ///   药品名生成药品列表（见 `DataSnapshot.fromJson`）。
+  /// - v4 → v5：附件名称由用户起。老包里图片的名称是相册文件名，恢复时清空。
+  static const formatVersion = 5;
+  static const _supportedVersions = {1, 2, 3, 4, formatVersion};
   static const _format = 'ligy-medical-backup';
   static const fileExtension = 'ligymedical';
 
@@ -125,7 +130,10 @@ class BackupService {
     final archive = await _decode(filePath);
     final manifest = _jsonFile(archive, 'manifest.json');
     _validateManifest(manifest);
-    final snapshot = DataSnapshot.fromJson(_jsonFile(archive, 'data.json'));
+    final snapshot = DataSnapshot.fromJson(
+      _jsonFile(archive, 'data.json'),
+      version: manifest['version'] as int,
+    );
     if (snapshot.profiles.length != manifest['profileCount'] ||
         snapshot.records.length != manifest['recordCount'] ||
         snapshot.attachments.length != manifest['attachmentCount'] ||

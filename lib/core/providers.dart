@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/injections/application/injection_service.dart';
 import '../features/records/application/record_service.dart';
 import 'backup/backup_service.dart';
 import 'database/app_database.dart';
@@ -15,6 +16,13 @@ final imageStorageProvider = Provider<ImageStorage>((ref) => ImageStorage());
 
 final recordServiceProvider = Provider<RecordService>((ref) {
   return RecordService(
+    ref.watch(databaseProvider),
+    ref.watch(imageStorageProvider),
+  );
+});
+
+final injectionServiceProvider = Provider<InjectionService>((ref) {
+  return InjectionService(
     ref.watch(databaseProvider),
     ref.watch(imageStorageProvider),
   );
@@ -82,4 +90,15 @@ final injectionsProvider = StreamProvider.autoDispose
     .family<List<InjectionEntry>, String>(
       (ref, profileId) =>
           ref.watch(databaseProvider).watchInjections(profileId),
+    );
+
+final drugsProvider = StreamProvider.autoDispose
+    .family<List<DrugEntry>, String>(
+      (ref, profileId) => ref.watch(databaseProvider).watchDrugs(profileId),
+    );
+
+final injectionPhotosProvider = StreamProvider.autoDispose
+    .family<List<InjectionPhotoEntry>, String>(
+      (ref, profileId) =>
+          ref.watch(databaseProvider).watchInjectionPhotos(profileId),
     );

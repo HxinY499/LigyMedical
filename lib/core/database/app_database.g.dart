@@ -3008,6 +3008,370 @@ class IndicatorValuesCompanion extends UpdateCompanion<IndicatorValueEntry> {
   }
 }
 
+class $DrugsTable extends Drugs with TableInfo<$DrugsTable, DrugEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DrugsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    name,
+    sortOrder,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'drugs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DrugEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {profileId, name},
+  ];
+  @override
+  DrugEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DrugEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DrugsTable createAlias(String alias) {
+    return $DrugsTable(attachedDatabase, alias);
+  }
+}
+
+class DrugEntry extends DataClass implements Insertable<DrugEntry> {
+  final String id;
+  final String profileId;
+  final String name;
+  final int sortOrder;
+  final int createdAt;
+  const DrugEntry({
+    required this.id,
+    required this.profileId,
+    required this.name,
+    required this.sortOrder,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['profile_id'] = Variable<String>(profileId);
+    map['name'] = Variable<String>(name);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  DrugsCompanion toCompanion(bool nullToAbsent) {
+    return DrugsCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory DrugEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DrugEntry(
+      id: serializer.fromJson<String>(json['id']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      name: serializer.fromJson<String>(json['name']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'profileId': serializer.toJson<String>(profileId),
+      'name': serializer.toJson<String>(name),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  DrugEntry copyWith({
+    String? id,
+    String? profileId,
+    String? name,
+    int? sortOrder,
+    int? createdAt,
+  }) => DrugEntry(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    name: name ?? this.name,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  DrugEntry copyWithCompanion(DrugsCompanion data) {
+    return DrugEntry(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      name: data.name.present ? data.name.value : this.name,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DrugEntry(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, profileId, name, sortOrder, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DrugEntry &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.name == this.name &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class DrugsCompanion extends UpdateCompanion<DrugEntry> {
+  final Value<String> id;
+  final Value<String> profileId;
+  final Value<String> name;
+  final Value<int> sortOrder;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const DrugsCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DrugsCompanion.insert({
+    required String id,
+    required String profileId,
+    required String name,
+    this.sortOrder = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       profileId = Value(profileId),
+       name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<DrugEntry> custom({
+    Expression<String>? id,
+    Expression<String>? profileId,
+    Expression<String>? name,
+    Expression<int>? sortOrder,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (name != null) 'name': name,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DrugsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? profileId,
+    Value<String>? name,
+    Value<int>? sortOrder,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return DrugsCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DrugsCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $InjectionPlansTable extends InjectionPlans
     with TableInfo<$InjectionPlansTable, InjectionPlanEntry> {
   @override
@@ -3028,15 +3392,17 @@ class $InjectionPlansTable extends InjectionPlans
       'REFERENCES profiles (id) ON DELETE CASCADE',
     ),
   );
-  static const VerificationMeta _drugMeta = const VerificationMeta('drug');
+  static const VerificationMeta _drugIdMeta = const VerificationMeta('drugId');
   @override
-  late final GeneratedColumn<String> drug = GeneratedColumn<String>(
-    'drug',
+  late final GeneratedColumn<String> drugId = GeneratedColumn<String>(
+    'drug_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant(''),
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES drugs (id) ON DELETE SET NULL',
+    ),
   );
   static const VerificationMeta _intervalDaysMeta = const VerificationMeta(
     'intervalDays',
@@ -3084,7 +3450,7 @@ class $InjectionPlansTable extends InjectionPlans
   @override
   List<GeneratedColumn> get $columns => [
     profileId,
-    drug,
+    drugId,
     intervalDays,
     sites,
     note,
@@ -3110,10 +3476,10 @@ class $InjectionPlansTable extends InjectionPlans
     } else if (isInserting) {
       context.missing(_profileIdMeta);
     }
-    if (data.containsKey('drug')) {
+    if (data.containsKey('drug_id')) {
       context.handle(
-        _drugMeta,
-        drug.isAcceptableOrUnknown(data['drug']!, _drugMeta),
+        _drugIdMeta,
+        drugId.isAcceptableOrUnknown(data['drug_id']!, _drugIdMeta),
       );
     }
     if (data.containsKey('interval_days')) {
@@ -3158,10 +3524,10 @@ class $InjectionPlansTable extends InjectionPlans
         DriftSqlType.string,
         data['${effectivePrefix}profile_id'],
       )!,
-      drug: attachedDatabase.typeMapping.read(
+      drugId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}drug'],
-      )!,
+        data['${effectivePrefix}drug_id'],
+      ),
       intervalDays: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}interval_days'],
@@ -3190,7 +3556,9 @@ class $InjectionPlansTable extends InjectionPlans
 class InjectionPlanEntry extends DataClass
     implements Insertable<InjectionPlanEntry> {
   final String profileId;
-  final String drug;
+
+  /// 计划用的药品；删掉那个药品后变为 null。
+  final String? drugId;
   final int intervalDays;
 
   /// 常用部位，按显示顺序以换行分隔。记录注射时作为快捷选项。
@@ -3199,7 +3567,7 @@ class InjectionPlanEntry extends DataClass
   final int updatedAt;
   const InjectionPlanEntry({
     required this.profileId,
-    required this.drug,
+    this.drugId,
     required this.intervalDays,
     required this.sites,
     required this.note,
@@ -3209,7 +3577,9 @@ class InjectionPlanEntry extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['profile_id'] = Variable<String>(profileId);
-    map['drug'] = Variable<String>(drug);
+    if (!nullToAbsent || drugId != null) {
+      map['drug_id'] = Variable<String>(drugId);
+    }
     map['interval_days'] = Variable<int>(intervalDays);
     map['sites'] = Variable<String>(sites);
     map['note'] = Variable<String>(note);
@@ -3220,7 +3590,9 @@ class InjectionPlanEntry extends DataClass
   InjectionPlansCompanion toCompanion(bool nullToAbsent) {
     return InjectionPlansCompanion(
       profileId: Value(profileId),
-      drug: Value(drug),
+      drugId: drugId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(drugId),
       intervalDays: Value(intervalDays),
       sites: Value(sites),
       note: Value(note),
@@ -3235,7 +3607,7 @@ class InjectionPlanEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return InjectionPlanEntry(
       profileId: serializer.fromJson<String>(json['profileId']),
-      drug: serializer.fromJson<String>(json['drug']),
+      drugId: serializer.fromJson<String?>(json['drugId']),
       intervalDays: serializer.fromJson<int>(json['intervalDays']),
       sites: serializer.fromJson<String>(json['sites']),
       note: serializer.fromJson<String>(json['note']),
@@ -3247,7 +3619,7 @@ class InjectionPlanEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'profileId': serializer.toJson<String>(profileId),
-      'drug': serializer.toJson<String>(drug),
+      'drugId': serializer.toJson<String?>(drugId),
       'intervalDays': serializer.toJson<int>(intervalDays),
       'sites': serializer.toJson<String>(sites),
       'note': serializer.toJson<String>(note),
@@ -3257,14 +3629,14 @@ class InjectionPlanEntry extends DataClass
 
   InjectionPlanEntry copyWith({
     String? profileId,
-    String? drug,
+    Value<String?> drugId = const Value.absent(),
     int? intervalDays,
     String? sites,
     String? note,
     int? updatedAt,
   }) => InjectionPlanEntry(
     profileId: profileId ?? this.profileId,
-    drug: drug ?? this.drug,
+    drugId: drugId.present ? drugId.value : this.drugId,
     intervalDays: intervalDays ?? this.intervalDays,
     sites: sites ?? this.sites,
     note: note ?? this.note,
@@ -3273,7 +3645,7 @@ class InjectionPlanEntry extends DataClass
   InjectionPlanEntry copyWithCompanion(InjectionPlansCompanion data) {
     return InjectionPlanEntry(
       profileId: data.profileId.present ? data.profileId.value : this.profileId,
-      drug: data.drug.present ? data.drug.value : this.drug,
+      drugId: data.drugId.present ? data.drugId.value : this.drugId,
       intervalDays: data.intervalDays.present
           ? data.intervalDays.value
           : this.intervalDays,
@@ -3287,7 +3659,7 @@ class InjectionPlanEntry extends DataClass
   String toString() {
     return (StringBuffer('InjectionPlanEntry(')
           ..write('profileId: $profileId, ')
-          ..write('drug: $drug, ')
+          ..write('drugId: $drugId, ')
           ..write('intervalDays: $intervalDays, ')
           ..write('sites: $sites, ')
           ..write('note: $note, ')
@@ -3298,13 +3670,13 @@ class InjectionPlanEntry extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(profileId, drug, intervalDays, sites, note, updatedAt);
+      Object.hash(profileId, drugId, intervalDays, sites, note, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is InjectionPlanEntry &&
           other.profileId == this.profileId &&
-          other.drug == this.drug &&
+          other.drugId == this.drugId &&
           other.intervalDays == this.intervalDays &&
           other.sites == this.sites &&
           other.note == this.note &&
@@ -3313,7 +3685,7 @@ class InjectionPlanEntry extends DataClass
 
 class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   final Value<String> profileId;
-  final Value<String> drug;
+  final Value<String?> drugId;
   final Value<int> intervalDays;
   final Value<String> sites;
   final Value<String> note;
@@ -3321,7 +3693,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   final Value<int> rowid;
   const InjectionPlansCompanion({
     this.profileId = const Value.absent(),
-    this.drug = const Value.absent(),
+    this.drugId = const Value.absent(),
     this.intervalDays = const Value.absent(),
     this.sites = const Value.absent(),
     this.note = const Value.absent(),
@@ -3330,7 +3702,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   });
   InjectionPlansCompanion.insert({
     required String profileId,
-    this.drug = const Value.absent(),
+    this.drugId = const Value.absent(),
     this.intervalDays = const Value.absent(),
     this.sites = const Value.absent(),
     this.note = const Value.absent(),
@@ -3340,7 +3712,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
        updatedAt = Value(updatedAt);
   static Insertable<InjectionPlanEntry> custom({
     Expression<String>? profileId,
-    Expression<String>? drug,
+    Expression<String>? drugId,
     Expression<int>? intervalDays,
     Expression<String>? sites,
     Expression<String>? note,
@@ -3349,7 +3721,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   }) {
     return RawValuesInsertable({
       if (profileId != null) 'profile_id': profileId,
-      if (drug != null) 'drug': drug,
+      if (drugId != null) 'drug_id': drugId,
       if (intervalDays != null) 'interval_days': intervalDays,
       if (sites != null) 'sites': sites,
       if (note != null) 'note': note,
@@ -3360,7 +3732,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
 
   InjectionPlansCompanion copyWith({
     Value<String>? profileId,
-    Value<String>? drug,
+    Value<String?>? drugId,
     Value<int>? intervalDays,
     Value<String>? sites,
     Value<String>? note,
@@ -3369,7 +3741,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   }) {
     return InjectionPlansCompanion(
       profileId: profileId ?? this.profileId,
-      drug: drug ?? this.drug,
+      drugId: drugId ?? this.drugId,
       intervalDays: intervalDays ?? this.intervalDays,
       sites: sites ?? this.sites,
       note: note ?? this.note,
@@ -3384,8 +3756,8 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
     if (profileId.present) {
       map['profile_id'] = Variable<String>(profileId.value);
     }
-    if (drug.present) {
-      map['drug'] = Variable<String>(drug.value);
+    if (drugId.present) {
+      map['drug_id'] = Variable<String>(drugId.value);
     }
     if (intervalDays.present) {
       map['interval_days'] = Variable<int>(intervalDays.value);
@@ -3409,7 +3781,7 @@ class InjectionPlansCompanion extends UpdateCompanion<InjectionPlanEntry> {
   String toString() {
     return (StringBuffer('InjectionPlansCompanion(')
           ..write('profileId: $profileId, ')
-          ..write('drug: $drug, ')
+          ..write('drugId: $drugId, ')
           ..write('intervalDays: $intervalDays, ')
           ..write('sites: $sites, ')
           ..write('note: $note, ')
@@ -3665,6 +4037,8 @@ class InjectionEntry extends DataClass implements Insertable<InjectionEntry> {
 
   /// `yyyy-MM-dd` 实际注射日期。
   final String date;
+
+  /// 当时打的药品名。存名字而不是药品 id：药品改名、删除都不改写已打过的记录。
   final String drug;
   final String site;
 
@@ -3969,6 +4343,584 @@ class InjectionsCompanion extends UpdateCompanion<InjectionEntry> {
   }
 }
 
+class $InjectionPhotosTable extends InjectionPhotos
+    with TableInfo<$InjectionPhotosTable, InjectionPhotoEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InjectionPhotosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _injectionIdMeta = const VerificationMeta(
+    'injectionId',
+  );
+  @override
+  late final GeneratedColumn<String> injectionId = GeneratedColumn<String>(
+    'injection_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES injections (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _drugIdMeta = const VerificationMeta('drugId');
+  @override
+  late final GeneratedColumn<String> drugId = GeneratedColumn<String>(
+    'drug_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES drugs (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _thumbnailPathMeta = const VerificationMeta(
+    'thumbnailPath',
+  );
+  @override
+  late final GeneratedColumn<String> thumbnailPath = GeneratedColumn<String>(
+    'thumbnail_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    injectionId,
+    drugId,
+    path,
+    thumbnailPath,
+    sizeBytes,
+    sortOrder,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'injection_photos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InjectionPhotoEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('injection_id')) {
+      context.handle(
+        _injectionIdMeta,
+        injectionId.isAcceptableOrUnknown(
+          data['injection_id']!,
+          _injectionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('drug_id')) {
+      context.handle(
+        _drugIdMeta,
+        drugId.isAcceptableOrUnknown(data['drug_id']!, _drugIdMeta),
+      );
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('thumbnail_path')) {
+      context.handle(
+        _thumbnailPathMeta,
+        thumbnailPath.isAcceptableOrUnknown(
+          data['thumbnail_path']!,
+          _thumbnailPathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_thumbnailPathMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InjectionPhotoEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InjectionPhotoEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      injectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}injection_id'],
+      ),
+      drugId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}drug_id'],
+      ),
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      thumbnailPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumbnail_path'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $InjectionPhotosTable createAlias(String alias) {
+    return $InjectionPhotosTable(attachedDatabase, alias);
+  }
+}
+
+class InjectionPhotoEntry extends DataClass
+    implements Insertable<InjectionPhotoEntry> {
+  final String id;
+  final String profileId;
+  final String? injectionId;
+  final String? drugId;
+
+  /// 相对 support 目录的路径。
+  final String path;
+  final String thumbnailPath;
+  final int sizeBytes;
+  final int sortOrder;
+  final int createdAt;
+  const InjectionPhotoEntry({
+    required this.id,
+    required this.profileId,
+    this.injectionId,
+    this.drugId,
+    required this.path,
+    required this.thumbnailPath,
+    required this.sizeBytes,
+    required this.sortOrder,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['profile_id'] = Variable<String>(profileId);
+    if (!nullToAbsent || injectionId != null) {
+      map['injection_id'] = Variable<String>(injectionId);
+    }
+    if (!nullToAbsent || drugId != null) {
+      map['drug_id'] = Variable<String>(drugId);
+    }
+    map['path'] = Variable<String>(path);
+    map['thumbnail_path'] = Variable<String>(thumbnailPath);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  InjectionPhotosCompanion toCompanion(bool nullToAbsent) {
+    return InjectionPhotosCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      injectionId: injectionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(injectionId),
+      drugId: drugId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(drugId),
+      path: Value(path),
+      thumbnailPath: Value(thumbnailPath),
+      sizeBytes: Value(sizeBytes),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory InjectionPhotoEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InjectionPhotoEntry(
+      id: serializer.fromJson<String>(json['id']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      injectionId: serializer.fromJson<String?>(json['injectionId']),
+      drugId: serializer.fromJson<String?>(json['drugId']),
+      path: serializer.fromJson<String>(json['path']),
+      thumbnailPath: serializer.fromJson<String>(json['thumbnailPath']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'profileId': serializer.toJson<String>(profileId),
+      'injectionId': serializer.toJson<String?>(injectionId),
+      'drugId': serializer.toJson<String?>(drugId),
+      'path': serializer.toJson<String>(path),
+      'thumbnailPath': serializer.toJson<String>(thumbnailPath),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  InjectionPhotoEntry copyWith({
+    String? id,
+    String? profileId,
+    Value<String?> injectionId = const Value.absent(),
+    Value<String?> drugId = const Value.absent(),
+    String? path,
+    String? thumbnailPath,
+    int? sizeBytes,
+    int? sortOrder,
+    int? createdAt,
+  }) => InjectionPhotoEntry(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    injectionId: injectionId.present ? injectionId.value : this.injectionId,
+    drugId: drugId.present ? drugId.value : this.drugId,
+    path: path ?? this.path,
+    thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  InjectionPhotoEntry copyWithCompanion(InjectionPhotosCompanion data) {
+    return InjectionPhotoEntry(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      injectionId: data.injectionId.present
+          ? data.injectionId.value
+          : this.injectionId,
+      drugId: data.drugId.present ? data.drugId.value : this.drugId,
+      path: data.path.present ? data.path.value : this.path,
+      thumbnailPath: data.thumbnailPath.present
+          ? data.thumbnailPath.value
+          : this.thumbnailPath,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InjectionPhotoEntry(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('injectionId: $injectionId, ')
+          ..write('drugId: $drugId, ')
+          ..write('path: $path, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    injectionId,
+    drugId,
+    path,
+    thumbnailPath,
+    sizeBytes,
+    sortOrder,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InjectionPhotoEntry &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.injectionId == this.injectionId &&
+          other.drugId == this.drugId &&
+          other.path == this.path &&
+          other.thumbnailPath == this.thumbnailPath &&
+          other.sizeBytes == this.sizeBytes &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class InjectionPhotosCompanion extends UpdateCompanion<InjectionPhotoEntry> {
+  final Value<String> id;
+  final Value<String> profileId;
+  final Value<String?> injectionId;
+  final Value<String?> drugId;
+  final Value<String> path;
+  final Value<String> thumbnailPath;
+  final Value<int> sizeBytes;
+  final Value<int> sortOrder;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const InjectionPhotosCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.injectionId = const Value.absent(),
+    this.drugId = const Value.absent(),
+    this.path = const Value.absent(),
+    this.thumbnailPath = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InjectionPhotosCompanion.insert({
+    required String id,
+    required String profileId,
+    this.injectionId = const Value.absent(),
+    this.drugId = const Value.absent(),
+    required String path,
+    required String thumbnailPath,
+    required int sizeBytes,
+    this.sortOrder = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       profileId = Value(profileId),
+       path = Value(path),
+       thumbnailPath = Value(thumbnailPath),
+       sizeBytes = Value(sizeBytes),
+       createdAt = Value(createdAt);
+  static Insertable<InjectionPhotoEntry> custom({
+    Expression<String>? id,
+    Expression<String>? profileId,
+    Expression<String>? injectionId,
+    Expression<String>? drugId,
+    Expression<String>? path,
+    Expression<String>? thumbnailPath,
+    Expression<int>? sizeBytes,
+    Expression<int>? sortOrder,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (injectionId != null) 'injection_id': injectionId,
+      if (drugId != null) 'drug_id': drugId,
+      if (path != null) 'path': path,
+      if (thumbnailPath != null) 'thumbnail_path': thumbnailPath,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InjectionPhotosCompanion copyWith({
+    Value<String>? id,
+    Value<String>? profileId,
+    Value<String?>? injectionId,
+    Value<String?>? drugId,
+    Value<String>? path,
+    Value<String>? thumbnailPath,
+    Value<int>? sizeBytes,
+    Value<int>? sortOrder,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return InjectionPhotosCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      injectionId: injectionId ?? this.injectionId,
+      drugId: drugId ?? this.drugId,
+      path: path ?? this.path,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (injectionId.present) {
+      map['injection_id'] = Variable<String>(injectionId.value);
+    }
+    if (drugId.present) {
+      map['drug_id'] = Variable<String>(drugId.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (thumbnailPath.present) {
+      map['thumbnail_path'] = Variable<String>(thumbnailPath.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InjectionPhotosCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('injectionId: $injectionId, ')
+          ..write('drugId: $drugId, ')
+          ..write('path: $path, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3981,8 +4933,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IndicatorValuesTable indicatorValues = $IndicatorValuesTable(
     this,
   );
+  late final $DrugsTable drugs = $DrugsTable(this);
   late final $InjectionPlansTable injectionPlans = $InjectionPlansTable(this);
   late final $InjectionsTable injections = $InjectionsTable(this);
+  late final $InjectionPhotosTable injectionPhotos = $InjectionPhotosTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3995,8 +4951,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fieldValues,
     indicators,
     indicatorValues,
+    drugs,
     injectionPlans,
     injections,
+    injectionPhotos,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4054,7 +5012,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         'profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
+      result: [TableUpdate('drugs', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
       result: [TableUpdate('injection_plans', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'drugs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('injection_plans', kind: UpdateKind.update)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -4062,6 +5034,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('injections', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('injection_photos', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'injections',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('injection_photos', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'drugs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('injection_photos', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4129,6 +5122,25 @@ final class $$ProfilesTableReferences
     );
   }
 
+  static MultiTypedResultKey<$DrugsTable, List<DrugEntry>> _drugsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.drugs,
+    aliasName: 'profiles__id__drugs__profile_id',
+  );
+
+  $$DrugsTableProcessedTableManager get drugsRefs {
+    final manager = $$DrugsTableTableManager(
+      $_db,
+      $_db.drugs,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_drugsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$InjectionPlansTable, List<InjectionPlanEntry>>
   _injectionPlansRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.injectionPlans,
@@ -4160,6 +5172,26 @@ final class $$ProfilesTableReferences
     ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_injectionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$InjectionPhotosTable, List<InjectionPhotoEntry>>
+  _injectionPhotosRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.injectionPhotos,
+    aliasName: 'profiles__id__injection_photos__profile_id',
+  );
+
+  $$InjectionPhotosTableProcessedTableManager get injectionPhotosRefs {
+    final manager = $$InjectionPhotosTableTableManager(
+      $_db,
+      $_db.injectionPhotos,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _injectionPhotosRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4260,6 +5292,31 @@ class $$ProfilesTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> drugsRefs(
+    Expression<bool> Function($$DrugsTableFilterComposer f) f,
+  ) {
+    final $$DrugsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableFilterComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> injectionPlansRefs(
     Expression<bool> Function($$InjectionPlansTableFilterComposer f) f,
   ) {
@@ -4301,6 +5358,31 @@ class $$ProfilesTableFilterComposer
           }) => $$InjectionsTableFilterComposer(
             $db: $db,
             $table: $db.injections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> injectionPhotosRefs(
+    Expression<bool> Function($$InjectionPhotosTableFilterComposer f) f,
+  ) {
+    final $$InjectionPhotosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableFilterComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4440,6 +5522,31 @@ class $$ProfilesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> drugsRefs<T extends Object>(
+    Expression<T> Function($$DrugsTableAnnotationComposer a) f,
+  ) {
+    final $$DrugsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> injectionPlansRefs<T extends Object>(
     Expression<T> Function($$InjectionPlansTableAnnotationComposer a) f,
   ) {
@@ -4489,6 +5596,31 @@ class $$ProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> injectionPhotosRefs<T extends Object>(
+    Expression<T> Function($$InjectionPhotosTableAnnotationComposer a) f,
+  ) {
+    final $$InjectionPhotosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -4507,8 +5639,10 @@ class $$ProfilesTableTableManager
           PrefetchHooks Function({
             bool recordsRefs,
             bool indicatorsRefs,
+            bool drugsRefs,
             bool injectionPlansRefs,
             bool injectionsRefs,
+            bool injectionPhotosRefs,
           })
         > {
   $$ProfilesTableTableManager(_$AppDatabase db, $ProfilesTable table)
@@ -4574,16 +5708,20 @@ class $$ProfilesTableTableManager
               ({
                 recordsRefs = false,
                 indicatorsRefs = false,
+                drugsRefs = false,
                 injectionPlansRefs = false,
                 injectionsRefs = false,
+                injectionPhotosRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (recordsRefs) db.records,
                     if (indicatorsRefs) db.indicators,
+                    if (drugsRefs) db.drugs,
                     if (injectionPlansRefs) db.injectionPlans,
                     if (injectionsRefs) db.injections,
+                    if (injectionPhotosRefs) db.injectionPhotos,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -4624,6 +5762,27 @@ class $$ProfilesTableTableManager
                                 table,
                                 p0,
                               ).indicatorsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (drugsRefs)
+                        await $_getPrefetchedData<
+                          ProfileEntry,
+                          $ProfilesTable,
+                          DrugEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._drugsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).drugsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.profileId == item.id,
@@ -4672,6 +5831,27 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (injectionPhotosRefs)
+                        await $_getPrefetchedData<
+                          ProfileEntry,
+                          $ProfilesTable,
+                          InjectionPhotoEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._injectionPhotosRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).injectionPhotosRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4695,8 +5875,10 @@ typedef $$ProfilesTableProcessedTableManager =
       PrefetchHooks Function({
         bool recordsRefs,
         bool indicatorsRefs,
+        bool drugsRefs,
         bool injectionPlansRefs,
         bool injectionsRefs,
+        bool injectionPhotosRefs,
       })
     >;
 typedef $$RecordsTableCreateCompanionBuilder =
@@ -7295,10 +8477,523 @@ typedef $$IndicatorValuesTableProcessedTableManager =
       IndicatorValueEntry,
       PrefetchHooks Function({bool recordId, bool indicatorId})
     >;
+typedef $$DrugsTableCreateCompanionBuilder =
+    DrugsCompanion Function({
+      required String id,
+      required String profileId,
+      required String name,
+      Value<int> sortOrder,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$DrugsTableUpdateCompanionBuilder =
+    DrugsCompanion Function({
+      Value<String> id,
+      Value<String> profileId,
+      Value<String> name,
+      Value<int> sortOrder,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$DrugsTableReferences
+    extends BaseReferences<_$AppDatabase, $DrugsTable, DrugEntry> {
+  $$DrugsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProfilesTable _profileIdTable(_$AppDatabase db) =>
+      db.profiles.createAlias('drugs__profile_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<String>('profile_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$InjectionPlansTable, List<InjectionPlanEntry>>
+  _injectionPlansRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.injectionPlans,
+    aliasName: 'drugs__id__injection_plans__drug_id',
+  );
+
+  $$InjectionPlansTableProcessedTableManager get injectionPlansRefs {
+    final manager = $$InjectionPlansTableTableManager(
+      $_db,
+      $_db.injectionPlans,
+    ).filter((f) => f.drugId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_injectionPlansRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$InjectionPhotosTable, List<InjectionPhotoEntry>>
+  _injectionPhotosRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.injectionPhotos,
+    aliasName: 'drugs__id__injection_photos__drug_id',
+  );
+
+  $$InjectionPhotosTableProcessedTableManager get injectionPhotosRefs {
+    final manager = $$InjectionPhotosTableTableManager(
+      $_db,
+      $_db.injectionPhotos,
+    ).filter((f) => f.drugId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _injectionPhotosRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$DrugsTableFilterComposer extends Composer<_$AppDatabase, $DrugsTable> {
+  $$DrugsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get profileId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> injectionPlansRefs(
+    Expression<bool> Function($$InjectionPlansTableFilterComposer f) f,
+  ) {
+    final $$InjectionPlansTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPlans,
+      getReferencedColumn: (t) => t.drugId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPlansTableFilterComposer(
+            $db: $db,
+            $table: $db.injectionPlans,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> injectionPhotosRefs(
+    Expression<bool> Function($$InjectionPhotosTableFilterComposer f) f,
+  ) {
+    final $$InjectionPhotosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.drugId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableFilterComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DrugsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DrugsTable> {
+  $$DrugsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get profileId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DrugsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DrugsTable> {
+  $$DrugsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get profileId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> injectionPlansRefs<T extends Object>(
+    Expression<T> Function($$InjectionPlansTableAnnotationComposer a) f,
+  ) {
+    final $$InjectionPlansTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPlans,
+      getReferencedColumn: (t) => t.drugId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPlansTableAnnotationComposer(
+            $db: $db,
+            $table: $db.injectionPlans,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> injectionPhotosRefs<T extends Object>(
+    Expression<T> Function($$InjectionPhotosTableAnnotationComposer a) f,
+  ) {
+    final $$InjectionPhotosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.drugId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DrugsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DrugsTable,
+          DrugEntry,
+          $$DrugsTableFilterComposer,
+          $$DrugsTableOrderingComposer,
+          $$DrugsTableAnnotationComposer,
+          $$DrugsTableCreateCompanionBuilder,
+          $$DrugsTableUpdateCompanionBuilder,
+          (DrugEntry, $$DrugsTableReferences),
+          DrugEntry,
+          PrefetchHooks Function({
+            bool profileId,
+            bool injectionPlansRefs,
+            bool injectionPhotosRefs,
+          })
+        > {
+  $$DrugsTableTableManager(_$AppDatabase db, $DrugsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DrugsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DrugsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DrugsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> profileId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DrugsCompanion(
+                id: id,
+                profileId: profileId,
+                name: name,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String profileId,
+                required String name,
+                Value<int> sortOrder = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DrugsCompanion.insert(
+                id: id,
+                profileId: profileId,
+                name: name,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DrugsTable, DrugEntry>(table),
+                  $$DrugsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                profileId = false,
+                injectionPlansRefs = false,
+                injectionPhotosRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (injectionPlansRefs) db.injectionPlans,
+                    if (injectionPhotosRefs) db.injectionPhotos,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (profileId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.profileId,
+                                    referencedTable: $$DrugsTableReferences
+                                        ._profileIdTable(db),
+                                    referencedColumn: $$DrugsTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (injectionPlansRefs)
+                        await $_getPrefetchedData<
+                          DrugEntry,
+                          $DrugsTable,
+                          InjectionPlanEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DrugsTableReferences
+                              ._injectionPlansRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DrugsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).injectionPlansRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.drugId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (injectionPhotosRefs)
+                        await $_getPrefetchedData<
+                          DrugEntry,
+                          $DrugsTable,
+                          InjectionPhotoEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DrugsTableReferences
+                              ._injectionPhotosRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DrugsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).injectionPhotosRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.drugId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$DrugsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DrugsTable,
+      DrugEntry,
+      $$DrugsTableFilterComposer,
+      $$DrugsTableOrderingComposer,
+      $$DrugsTableAnnotationComposer,
+      $$DrugsTableCreateCompanionBuilder,
+      $$DrugsTableUpdateCompanionBuilder,
+      (DrugEntry, $$DrugsTableReferences),
+      DrugEntry,
+      PrefetchHooks Function({
+        bool profileId,
+        bool injectionPlansRefs,
+        bool injectionPhotosRefs,
+      })
+    >;
 typedef $$InjectionPlansTableCreateCompanionBuilder =
     InjectionPlansCompanion Function({
       required String profileId,
-      Value<String> drug,
+      Value<String?> drugId,
       Value<int> intervalDays,
       Value<String> sites,
       Value<String> note,
@@ -7308,7 +9003,7 @@ typedef $$InjectionPlansTableCreateCompanionBuilder =
 typedef $$InjectionPlansTableUpdateCompanionBuilder =
     InjectionPlansCompanion Function({
       Value<String> profileId,
-      Value<String> drug,
+      Value<String?> drugId,
       Value<int> intervalDays,
       Value<String> sites,
       Value<String> note,
@@ -7345,6 +9040,23 @@ final class $$InjectionPlansTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static $DrugsTable _drugIdTable(_$AppDatabase db) =>
+      db.drugs.createAlias('injection_plans__drug_id__drugs__id');
+
+  $$DrugsTableProcessedTableManager? get drugId {
+    final $_column = $_itemColumn<String>('drug_id');
+    if ($_column == null) return null;
+    final manager = $$DrugsTableTableManager(
+      $_db,
+      $_db.drugs,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_drugIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 }
 
 class $$InjectionPlansTableFilterComposer
@@ -7356,11 +9068,6 @@ class $$InjectionPlansTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get drug => $composableBuilder(
-    column: $table.drug,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get intervalDays => $composableBuilder(
     column: $table.intervalDays,
     builder: (column) => ColumnFilters(column),
@@ -7403,6 +9110,29 @@ class $$InjectionPlansTableFilterComposer
     );
     return composer;
   }
+
+  $$DrugsTableFilterComposer get drugId {
+    final $$DrugsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableFilterComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$InjectionPlansTableOrderingComposer
@@ -7414,11 +9144,6 @@ class $$InjectionPlansTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get drug => $composableBuilder(
-    column: $table.drug,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get intervalDays => $composableBuilder(
     column: $table.intervalDays,
     builder: (column) => ColumnOrderings(column),
@@ -7461,6 +9186,29 @@ class $$InjectionPlansTableOrderingComposer
     );
     return composer;
   }
+
+  $$DrugsTableOrderingComposer get drugId {
+    final $$DrugsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableOrderingComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$InjectionPlansTableAnnotationComposer
@@ -7472,9 +9220,6 @@ class $$InjectionPlansTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get drug =>
-      $composableBuilder(column: $table.drug, builder: (column) => column);
-
   GeneratedColumn<int> get intervalDays => $composableBuilder(
     column: $table.intervalDays,
     builder: (column) => column,
@@ -7511,6 +9256,29 @@ class $$InjectionPlansTableAnnotationComposer
     );
     return composer;
   }
+
+  $$DrugsTableAnnotationComposer get drugId {
+    final $$DrugsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$InjectionPlansTableTableManager
@@ -7526,7 +9294,7 @@ class $$InjectionPlansTableTableManager
           $$InjectionPlansTableUpdateCompanionBuilder,
           (InjectionPlanEntry, $$InjectionPlansTableReferences),
           InjectionPlanEntry,
-          PrefetchHooks Function({bool profileId})
+          PrefetchHooks Function({bool profileId, bool drugId})
         > {
   $$InjectionPlansTableTableManager(
     _$AppDatabase db,
@@ -7544,7 +9312,7 @@ class $$InjectionPlansTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> profileId = const Value.absent(),
-                Value<String> drug = const Value.absent(),
+                Value<String?> drugId = const Value.absent(),
                 Value<int> intervalDays = const Value.absent(),
                 Value<String> sites = const Value.absent(),
                 Value<String> note = const Value.absent(),
@@ -7552,7 +9320,7 @@ class $$InjectionPlansTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => InjectionPlansCompanion(
                 profileId: profileId,
-                drug: drug,
+                drugId: drugId,
                 intervalDays: intervalDays,
                 sites: sites,
                 note: note,
@@ -7562,7 +9330,7 @@ class $$InjectionPlansTableTableManager
           createCompanionCallback:
               ({
                 required String profileId,
-                Value<String> drug = const Value.absent(),
+                Value<String?> drugId = const Value.absent(),
                 Value<int> intervalDays = const Value.absent(),
                 Value<String> sites = const Value.absent(),
                 Value<String> note = const Value.absent(),
@@ -7570,7 +9338,7 @@ class $$InjectionPlansTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => InjectionPlansCompanion.insert(
                 profileId: profileId,
-                drug: drug,
+                drugId: drugId,
                 intervalDays: intervalDays,
                 sites: sites,
                 note: note,
@@ -7585,7 +9353,7 @@ class $$InjectionPlansTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({profileId = false}) {
+          prefetchHooksCallback: ({profileId = false, drugId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -7619,6 +9387,20 @@ class $$InjectionPlansTableTableManager
                               )
                               as T;
                     }
+                    if (drugId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.drugId,
+                                referencedTable: $$InjectionPlansTableReferences
+                                    ._drugIdTable(db),
+                                referencedColumn:
+                                    $$InjectionPlansTableReferences
+                                        ._drugIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
 
                     return state;
                   },
@@ -7643,7 +9425,7 @@ typedef $$InjectionPlansTableProcessedTableManager =
       $$InjectionPlansTableUpdateCompanionBuilder,
       (InjectionPlanEntry, $$InjectionPlansTableReferences),
       InjectionPlanEntry,
-      PrefetchHooks Function({bool profileId})
+      PrefetchHooks Function({bool profileId, bool drugId})
     >;
 typedef $$InjectionsTableCreateCompanionBuilder =
     InjectionsCompanion Function({
@@ -7690,6 +9472,26 @@ final class $$InjectionsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$InjectionPhotosTable, List<InjectionPhotoEntry>>
+  _injectionPhotosRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.injectionPhotos,
+    aliasName: 'injections__id__injection_photos__injection_id',
+  );
+
+  $$InjectionPhotosTableProcessedTableManager get injectionPhotosRefs {
+    final manager = $$InjectionPhotosTableTableManager(
+      $_db,
+      $_db.injectionPhotos,
+    ).filter((f) => f.injectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _injectionPhotosRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -7764,6 +9566,31 @@ class $$InjectionsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> injectionPhotosRefs(
+    Expression<bool> Function($$InjectionPhotosTableFilterComposer f) f,
+  ) {
+    final $$InjectionPhotosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.injectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableFilterComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -7895,6 +9722,31 @@ class $$InjectionsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> injectionPhotosRefs<T extends Object>(
+    Expression<T> Function($$InjectionPhotosTableAnnotationComposer a) f,
+  ) {
+    final $$InjectionPhotosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.injectionPhotos,
+      getReferencedColumn: (t) => t.injectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionPhotosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.injectionPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$InjectionsTableTableManager
@@ -7910,7 +9762,7 @@ class $$InjectionsTableTableManager
           $$InjectionsTableUpdateCompanionBuilder,
           (InjectionEntry, $$InjectionsTableReferences),
           InjectionEntry,
-          PrefetchHooks Function({bool profileId})
+          PrefetchHooks Function({bool profileId, bool injectionPhotosRefs})
         > {
   $$InjectionsTableTableManager(_$AppDatabase db, $InjectionsTable table)
     : super(
@@ -7979,47 +9831,73 @@ class $$InjectionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({profileId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (profileId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.profileId,
-                                referencedTable: $$InjectionsTableReferences
-                                    ._profileIdTable(db),
-                                referencedColumn: $$InjectionsTableReferences
-                                    ._profileIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({profileId = false, injectionPhotosRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (injectionPhotosRefs) db.injectionPhotos,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (profileId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.profileId,
+                                    referencedTable: $$InjectionsTableReferences
+                                        ._profileIdTable(db),
+                                    referencedColumn:
+                                        $$InjectionsTableReferences
+                                            ._profileIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (injectionPhotosRefs)
+                        await $_getPrefetchedData<
+                          InjectionEntry,
+                          $InjectionsTable,
+                          InjectionPhotoEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$InjectionsTableReferences
+                              ._injectionPhotosRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$InjectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).injectionPhotosRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.injectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -8036,7 +9914,598 @@ typedef $$InjectionsTableProcessedTableManager =
       $$InjectionsTableUpdateCompanionBuilder,
       (InjectionEntry, $$InjectionsTableReferences),
       InjectionEntry,
-      PrefetchHooks Function({bool profileId})
+      PrefetchHooks Function({bool profileId, bool injectionPhotosRefs})
+    >;
+typedef $$InjectionPhotosTableCreateCompanionBuilder =
+    InjectionPhotosCompanion Function({
+      required String id,
+      required String profileId,
+      Value<String?> injectionId,
+      Value<String?> drugId,
+      required String path,
+      required String thumbnailPath,
+      required int sizeBytes,
+      Value<int> sortOrder,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$InjectionPhotosTableUpdateCompanionBuilder =
+    InjectionPhotosCompanion Function({
+      Value<String> id,
+      Value<String> profileId,
+      Value<String?> injectionId,
+      Value<String?> drugId,
+      Value<String> path,
+      Value<String> thumbnailPath,
+      Value<int> sizeBytes,
+      Value<int> sortOrder,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$InjectionPhotosTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $InjectionPhotosTable,
+          InjectionPhotoEntry
+        > {
+  $$InjectionPhotosTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _profileIdTable(_$AppDatabase db) =>
+      db.profiles.createAlias('injection_photos__profile_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<String>('profile_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $InjectionsTable _injectionIdTable(_$AppDatabase db) => db.injections
+      .createAlias('injection_photos__injection_id__injections__id');
+
+  $$InjectionsTableProcessedTableManager? get injectionId {
+    final $_column = $_itemColumn<String>('injection_id');
+    if ($_column == null) return null;
+    final manager = $$InjectionsTableTableManager(
+      $_db,
+      $_db.injections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_injectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $DrugsTable _drugIdTable(_$AppDatabase db) =>
+      db.drugs.createAlias('injection_photos__drug_id__drugs__id');
+
+  $$DrugsTableProcessedTableManager? get drugId {
+    final $_column = $_itemColumn<String>('drug_id');
+    if ($_column == null) return null;
+    final manager = $$DrugsTableTableManager(
+      $_db,
+      $_db.drugs,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_drugIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$InjectionPhotosTableFilterComposer
+    extends Composer<_$AppDatabase, $InjectionPhotosTable> {
+  $$InjectionPhotosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get profileId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InjectionsTableFilterComposer get injectionId {
+    final $$InjectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.injectionId,
+      referencedTable: $db.injections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.injections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$DrugsTableFilterComposer get drugId {
+    final $$DrugsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableFilterComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InjectionPhotosTableOrderingComposer
+    extends Composer<_$AppDatabase, $InjectionPhotosTable> {
+  $$InjectionPhotosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get profileId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InjectionsTableOrderingComposer get injectionId {
+    final $$InjectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.injectionId,
+      referencedTable: $db.injections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.injections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$DrugsTableOrderingComposer get drugId {
+    final $$DrugsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableOrderingComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InjectionPhotosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InjectionPhotosTable> {
+  $$InjectionPhotosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get profileId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InjectionsTableAnnotationComposer get injectionId {
+    final $$InjectionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.injectionId,
+      referencedTable: $db.injections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InjectionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.injections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$DrugsTableAnnotationComposer get drugId {
+    final $$DrugsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.drugId,
+      referencedTable: $db.drugs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DrugsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.drugs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InjectionPhotosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InjectionPhotosTable,
+          InjectionPhotoEntry,
+          $$InjectionPhotosTableFilterComposer,
+          $$InjectionPhotosTableOrderingComposer,
+          $$InjectionPhotosTableAnnotationComposer,
+          $$InjectionPhotosTableCreateCompanionBuilder,
+          $$InjectionPhotosTableUpdateCompanionBuilder,
+          (InjectionPhotoEntry, $$InjectionPhotosTableReferences),
+          InjectionPhotoEntry,
+          PrefetchHooks Function({
+            bool profileId,
+            bool injectionId,
+            bool drugId,
+          })
+        > {
+  $$InjectionPhotosTableTableManager(
+    _$AppDatabase db,
+    $InjectionPhotosTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InjectionPhotosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InjectionPhotosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InjectionPhotosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> profileId = const Value.absent(),
+                Value<String?> injectionId = const Value.absent(),
+                Value<String?> drugId = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> thumbnailPath = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InjectionPhotosCompanion(
+                id: id,
+                profileId: profileId,
+                injectionId: injectionId,
+                drugId: drugId,
+                path: path,
+                thumbnailPath: thumbnailPath,
+                sizeBytes: sizeBytes,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String profileId,
+                Value<String?> injectionId = const Value.absent(),
+                Value<String?> drugId = const Value.absent(),
+                required String path,
+                required String thumbnailPath,
+                required int sizeBytes,
+                Value<int> sortOrder = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => InjectionPhotosCompanion.insert(
+                id: id,
+                profileId: profileId,
+                injectionId: injectionId,
+                drugId: drugId,
+                path: path,
+                thumbnailPath: thumbnailPath,
+                sizeBytes: sizeBytes,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$InjectionPhotosTable, InjectionPhotoEntry>(
+                    table,
+                  ),
+                  $$InjectionPhotosTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({profileId = false, injectionId = false, drugId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (profileId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.profileId,
+                                    referencedTable:
+                                        $$InjectionPhotosTableReferences
+                                            ._profileIdTable(db),
+                                    referencedColumn:
+                                        $$InjectionPhotosTableReferences
+                                            ._profileIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (injectionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.injectionId,
+                                    referencedTable:
+                                        $$InjectionPhotosTableReferences
+                                            ._injectionIdTable(db),
+                                    referencedColumn:
+                                        $$InjectionPhotosTableReferences
+                                            ._injectionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (drugId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.drugId,
+                                    referencedTable:
+                                        $$InjectionPhotosTableReferences
+                                            ._drugIdTable(db),
+                                    referencedColumn:
+                                        $$InjectionPhotosTableReferences
+                                            ._drugIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$InjectionPhotosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InjectionPhotosTable,
+      InjectionPhotoEntry,
+      $$InjectionPhotosTableFilterComposer,
+      $$InjectionPhotosTableOrderingComposer,
+      $$InjectionPhotosTableAnnotationComposer,
+      $$InjectionPhotosTableCreateCompanionBuilder,
+      $$InjectionPhotosTableUpdateCompanionBuilder,
+      (InjectionPhotoEntry, $$InjectionPhotosTableReferences),
+      InjectionPhotoEntry,
+      PrefetchHooks Function({bool profileId, bool injectionId, bool drugId})
     >;
 
 class $AppDatabaseManager {
@@ -8056,8 +10525,12 @@ class $AppDatabaseManager {
       $$IndicatorsTableTableManager(_db, _db.indicators);
   $$IndicatorValuesTableTableManager get indicatorValues =>
       $$IndicatorValuesTableTableManager(_db, _db.indicatorValues);
+  $$DrugsTableTableManager get drugs =>
+      $$DrugsTableTableManager(_db, _db.drugs);
   $$InjectionPlansTableTableManager get injectionPlans =>
       $$InjectionPlansTableTableManager(_db, _db.injectionPlans);
   $$InjectionsTableTableManager get injections =>
       $$InjectionsTableTableManager(_db, _db.injections);
+  $$InjectionPhotosTableTableManager get injectionPhotos =>
+      $$InjectionPhotosTableTableManager(_db, _db.injectionPhotos);
 }

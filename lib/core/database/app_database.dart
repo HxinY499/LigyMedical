@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 part 'app_database.g.dart';
 
@@ -59,7 +60,7 @@ class Attachments extends Table {
   /// 只有图片有缩略图。
   TextColumn get thumbnailPath => text().nullable()();
 
-  /// 原始文件名，PDF 列表里显示用。
+  /// 附件名称，用户可改。PDF 默认是原始文件名，图片默认为空（不显示名称）。
   TextColumn get name => text().withDefault(const Constant(''))();
   IntColumn get sizeBytes => integer()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
@@ -134,12 +135,34 @@ class IndicatorValues extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// 档案里维护的药品。注射计划从这里选，记录注射时作为选项。同一档案内按名称唯一。
+@DataClassName('DrugEntry')
+class Drugs extends Table {
+  TextColumn get id => text()();
+  TextColumn get profileId =>
+      text().references(Profiles, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {profileId, name},
+  ];
+}
+
 /// 注射计划，每个档案至多一份。
 @DataClassName('InjectionPlanEntry')
 class InjectionPlans extends Table {
   TextColumn get profileId =>
       text().references(Profiles, #id, onDelete: KeyAction.cascade)();
-  TextColumn get drug => text().withDefault(const Constant(''))();
+
+  /// 计划用的药品；删掉那个药品后变为 null。
+  TextColumn get drugId =>
+      text().nullable().references(Drugs, #id, onDelete: KeyAction.setNull)();
   IntColumn get intervalDays => integer().withDefault(const Constant(14))();
 
   /// 常用部位，按显示顺序以换行分隔。记录注射时作为快捷选项。
@@ -160,6 +183,8 @@ class Injections extends Table {
 
   /// `yyyy-MM-dd` 实际注射日期。
   TextColumn get date => text()();
+
+  /// 当时打的药品名。存名字而不是药品 id：药品改名、删除都不改写已打过的记录。
   TextColumn get drug => text().withDefault(const Constant(''))();
   TextColumn get site => text().withDefault(const Constant(''))();
 
@@ -168,6 +193,32 @@ class Injections extends Table {
   TextColumn get note => text().withDefault(const Constant(''))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// 注射相关的照片：某一针的照片（[injectionId]）或某个药品的照片（[drugId]），
+/// 两者恰有一个非空。
+@DataClassName('InjectionPhotoEntry')
+class InjectionPhotos extends Table {
+  TextColumn get id => text()();
+  TextColumn get profileId =>
+      text().references(Profiles, #id, onDelete: KeyAction.cascade)();
+  TextColumn get injectionId => text().nullable().references(
+    Injections,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get drugId =>
+      text().nullable().references(Drugs, #id, onDelete: KeyAction.cascade)();
+
+  /// 相对 support 目录的路径。
+  TextColumn get path => text()();
+  TextColumn get thumbnailPath => text()();
+  IntColumn get sizeBytes => integer()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get createdAt => integer()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -265,8 +316,10 @@ class DataSnapshot {
     required this.fieldValues,
     required this.indicators,
     required this.indicatorValues,
+    required this.drugs,
     required this.injectionPlans,
     required this.injections,
+    required this.injectionPhotos,
   });
 
   final List<ProfileEntry> profiles;
@@ -276,15 +329,18 @@ class DataSnapshot {
   final List<FieldValueEntry> fieldValues;
   final List<IndicatorEntry> indicators;
   final List<IndicatorValueEntry> indicatorValues;
+  final List<DrugEntry> drugs;
   final List<InjectionPlanEntry> injectionPlans;
   final List<InjectionEntry> injections;
+  final List<InjectionPhotoEntry> injectionPhotos;
 
-  /// 附件在 support 目录下的全部相对路径（含缩略图）。
+  /// 附件与注射照片在 support 目录下的全部相对路径（含缩略图）。
   List<String> get filePaths => [
     for (final attachment in attachments) ...[
       attachment.path,
       ?attachment.thumbnailPath,
     ],
+    for (final photo in injectionPhotos) ...[photo.path, photo.thumbnailPath],
   ];
 
   Map<String, Object> toJson() => {
@@ -295,12 +351,22 @@ class DataSnapshot {
     'fieldValues': [for (final row in fieldValues) row.toJson()],
     'indicators': [for (final row in indicators) row.toJson()],
     'indicatorValues': [for (final row in indicatorValues) row.toJson()],
+    'drugs': [for (final row in drugs) row.toJson()],
     'injectionPlans': [for (final row in injectionPlans) row.toJson()],
     'injections': [for (final row in injections) row.toJson()],
+    'injectionPhotos': [for (final row in injectionPhotos) row.toJson()],
   };
 
-  factory DataSnapshot.fromJson(Map<String, Object?> json) {
+  /// [version] 是备份格式版本，见 `BackupService.formatVersion`。
+  factory DataSnapshot.fromJson(
+    Map<String, Object?> json, {
+    required int version,
+  }) {
     _fillValueDates(json);
+    if (version < 5) _clearImageNames(json);
+    // 第 3 版才有注射照片，更早的备份里没有这一项。
+    json['injectionPhotos'] ??= <Object>[];
+    _buildLegacyDrugs(json);
     List<T> rows<T>(String key, T Function(Map<String, dynamic>) parse) {
       final list = json[key];
       if (list is! List) throw FormatException('备份缺少 $key');
@@ -317,9 +383,72 @@ class DataSnapshot {
       fieldValues: rows('fieldValues', FieldValueEntry.fromJson),
       indicators: rows('indicators', IndicatorEntry.fromJson),
       indicatorValues: rows('indicatorValues', IndicatorValueEntry.fromJson),
+      drugs: rows('drugs', DrugEntry.fromJson),
       injectionPlans: rows('injectionPlans', InjectionPlanEntry.fromJson),
       injections: rows('injections', InjectionEntry.fromJson),
+      injectionPhotos: rows('injectionPhotos', InjectionPhotoEntry.fromJson),
     );
+  }
+}
+
+/// 第 4 版之前没有药品列表：计划里的药品是一段文字，计划的照片直接挂在计划上。
+///
+/// 和数据库升级同一套规则：每个档案里计划的药品与打过的药品名各建一个药品，
+/// 计划改为指向它，计划的照片归到计划的药品；计划没填药品时这些照片没有归属，丢弃。
+void _buildLegacyDrugs(Map<String, Object?> json) {
+  if (json['drugs'] != null) return;
+  final plans = json['injectionPlans'];
+  final injections = json['injections'];
+  final photos = json['injectionPhotos'];
+  if (plans is! List || injections is! List || photos is! List) return;
+
+  final drugs = <Map<String, Object?>>[];
+  final ids = <String, String>{};
+  String? ensure(Object? profileId, Object? name) {
+    if (profileId is! String || name is! String) return null;
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+    return ids.putIfAbsent('$profileId\n$trimmed', () {
+      final id = const Uuid().v4();
+      drugs.add({
+        'id': id,
+        'profileId': profileId,
+        'name': trimmed,
+        'sortOrder': drugs.length,
+        'createdAt': 0,
+      });
+      return id;
+    });
+  }
+
+  final planDrug = <Object?, String?>{};
+  for (final plan in plans) {
+    if (plan is! Map) continue;
+    final drugId = ensure(plan['profileId'], plan.remove('drug'));
+    plan['drugId'] = drugId;
+    planDrug[plan['profileId']] = drugId;
+  }
+  for (final injection in injections) {
+    if (injection is Map) ensure(injection['profileId'], injection['drug']);
+  }
+  photos.removeWhere((photo) {
+    if (photo is! Map || photo['injectionId'] != null) return false;
+    final drugId = planDrug[photo['profileId']];
+    photo['drugId'] = drugId;
+    return drugId == null;
+  });
+  json['drugs'] = drugs;
+}
+
+/// 第 5 版之前图片附件的名称是相册给的文件名（如 `1000034567.jpg`），从未显示过；
+/// 现在名称会显示出来，清空，免得每张老照片下面都挂一串数字。PDF 的文件名保留。
+void _clearImageNames(Map<String, Object?> json) {
+  final attachments = json['attachments'];
+  if (attachments is! List) return;
+  for (final attachment in attachments) {
+    if (attachment is Map && attachment['kind'] == AttachmentKind.image.index) {
+      attachment['name'] = '';
+    }
   }
 }
 
@@ -348,8 +477,10 @@ void _fillValueDates(Map<String, Object?> json) {
     FieldValues,
     Indicators,
     IndicatorValues,
+    Drugs,
     InjectionPlans,
     Injections,
+    InjectionPhotos,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -358,7 +489,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -395,6 +526,65 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_indicator_values_indicator '
           'ON indicator_values(indicator_id)',
+        );
+      }
+      if (from < 3) {
+        await migrator.createTable(injectionPhotos);
+      }
+      if (from < 4) {
+        // 药品从计划里的一段文字变成单独维护的列表。规则与老备份的转换一致
+        // （见 `_buildLegacyDrugs`）：计划的药品和打过的药品名各建一个药品，
+        // 计划改为指向它，计划的照片归到计划的药品，没有归属的丢弃。
+        await migrator.createTable(drugs);
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await customStatement(
+          'INSERT OR IGNORE INTO drugs '
+          '(id, profile_id, name, sort_order, created_at) '
+          'SELECT lower(hex(randomblob(16))), profile_id, TRIM(drug), 0, ? '
+          "FROM injection_plans WHERE TRIM(drug) != ''",
+          [now],
+        );
+        await customStatement(
+          'INSERT OR IGNORE INTO drugs '
+          '(id, profile_id, name, sort_order, created_at) '
+          'SELECT lower(hex(randomblob(16))), profile_id, TRIM(drug), 1, ? '
+          "FROM injections WHERE TRIM(drug) != '' "
+          'GROUP BY profile_id, TRIM(drug)',
+          [now],
+        );
+        await migrator.alterTable(
+          TableMigration(
+            injectionPlans,
+            newColumns: [injectionPlans.drugId],
+            columnTransformer: {
+              injectionPlans.drugId: const CustomExpression<String>(
+                '(SELECT id FROM drugs '
+                'WHERE drugs.profile_id = injection_plans.profile_id '
+                'AND drugs.name = TRIM(injection_plans.drug))',
+              ),
+            },
+          ),
+        );
+        // 第 3 版之前的库刚按新定义建了照片表，已经带 drug_id。
+        if (from == 3) {
+          await migrator.addColumn(injectionPhotos, injectionPhotos.drugId);
+          await customStatement(
+            'UPDATE injection_photos SET drug_id = '
+            '(SELECT drug_id FROM injection_plans '
+            'WHERE injection_plans.profile_id = injection_photos.profile_id) '
+            'WHERE injection_id IS NULL',
+          );
+          await customStatement(
+            'DELETE FROM injection_photos '
+            'WHERE injection_id IS NULL AND drug_id IS NULL',
+          );
+        }
+      }
+      if (from < 5) {
+        // 图片附件的名称改为用户自己起的；原来存的是相册文件名，清空（见 `_clearImageNames`）。
+        await customStatement(
+          "UPDATE attachments SET name = '' WHERE kind = ?",
+          [AttachmentKind.image.index],
         );
       }
     },
@@ -832,7 +1022,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> saveInjectionPlan({
     required String profileId,
-    required String drug,
+    required String? drugId,
     required int intervalDays,
     required List<String> sites,
     required String note,
@@ -840,7 +1030,7 @@ class AppDatabase extends _$AppDatabase {
     return into(injectionPlans).insertOnConflictUpdate(
       InjectionPlansCompanion.insert(
         profileId: profileId,
-        drug: Value(drug),
+        drugId: Value(drugId),
         intervalDays: Value(intervalDays),
         sites: Value(sites.join('\n')),
         note: Value(note),
@@ -905,6 +1095,95 @@ class AppDatabase extends _$AppDatabase {
     return (delete(injections)..where((row) => row.id.equals(id))).go();
   }
 
+  /// 档案下的全部注射照片（药品的 + 每一针的），按显示顺序。
+  Stream<List<InjectionPhotoEntry>> watchInjectionPhotos(String profileId) {
+    final query = select(injectionPhotos)
+      ..where((row) => row.profileId.equals(profileId))
+      ..orderBy([
+        (row) => OrderingTerm.asc(row.sortOrder),
+        (row) => OrderingTerm.asc(row.createdAt),
+      ]);
+    return query.watch();
+  }
+
+  /// 某一针或某个药品的照片，二者传其一。
+  Future<List<InjectionPhotoEntry>> photoList({
+    String? injectionId,
+    String? drugId,
+  }) {
+    assert((injectionId == null) != (drugId == null));
+    final query = select(injectionPhotos)
+      ..where(
+        (row) => injectionId != null
+            ? row.injectionId.equals(injectionId)
+            : row.drugId.equals(drugId!),
+      )
+      ..orderBy([
+        (row) => OrderingTerm.asc(row.sortOrder),
+        (row) => OrderingTerm.asc(row.createdAt),
+      ]);
+    return query.get();
+  }
+
+  // ------------------------------------------------------------------ 药品
+
+  Stream<List<DrugEntry>> watchDrugs(String profileId) {
+    final query = select(drugs)
+      ..where((row) => row.profileId.equals(profileId))
+      ..orderBy([
+        (row) => OrderingTerm.asc(row.sortOrder),
+        (row) => OrderingTerm.asc(row.createdAt),
+      ]);
+    return query.watch();
+  }
+
+  /// 新建或改名。同一档案里已有同名的其他药品时返回 false，不写。
+  Future<bool> saveDrug({
+    required String id,
+    required String profileId,
+    required String name,
+  }) async {
+    final clash =
+        await (select(drugs)..where(
+              (row) =>
+                  row.profileId.equals(profileId) &
+                  row.name.equals(name) &
+                  row.id.equals(id).not(),
+            ))
+            .getSingleOrNull();
+    if (clash != null) return false;
+    final existing = await (select(
+      drugs,
+    )..where((row) => row.id.equals(id))).getSingleOrNull();
+    if (existing != null) {
+      await (update(drugs)..where((row) => row.id.equals(id))).write(
+        DrugsCompanion(name: Value(name)),
+      );
+      return true;
+    }
+    final maxSort = drugs.sortOrder.max();
+    final result =
+        await (selectOnly(drugs)
+              ..addColumns([maxSort])
+              ..where(drugs.profileId.equals(profileId)))
+            .getSingle();
+    await into(drugs).insert(
+      DrugsCompanion.insert(
+        id: id,
+        profileId: profileId,
+        name: name,
+        sortOrder: Value((result.read(maxSort) ?? -1) + 1),
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+    return true;
+  }
+
+  /// 删除药品：它的照片行级联删掉，用它的计划变成未选药品；打过的记录不动。
+  Future<void> deleteDrug(String id) {
+    return (delete(drugs)..where((row) => row.id.equals(id))).go();
+  }
+
   // ------------------------------------------------------------------ 备份
 
   /// 全库快照。在一个事务里读，保证各表之间一致。
@@ -918,8 +1197,10 @@ class AppDatabase extends _$AppDatabase {
         fieldValues: await select(fieldValues).get(),
         indicators: await select(indicators).get(),
         indicatorValues: await select(indicatorValues).get(),
+        drugs: await select(drugs).get(),
         injectionPlans: await select(injectionPlans).get(),
         injections: await select(injections).get(),
+        injectionPhotos: await select(injectionPhotos).get(),
       ),
     );
   }
@@ -938,8 +1219,10 @@ class AppDatabase extends _$AppDatabase {
         batch.insertAll(fieldValues, data.fieldValues);
         batch.insertAll(indicators, data.indicators);
         batch.insertAll(indicatorValues, data.indicatorValues);
+        batch.insertAll(drugs, data.drugs);
         batch.insertAll(injectionPlans, data.injectionPlans);
         batch.insertAll(injections, data.injections);
+        batch.insertAll(injectionPhotos, data.injectionPhotos);
       });
     });
   }

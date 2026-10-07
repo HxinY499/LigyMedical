@@ -17,11 +17,10 @@ import 'package:forui/forui.dart';
 /// 第二根手指一按下就把翻页 physics 换成不可滚动，缩放独占；未放大时的单指
 /// 垂直拖动也在这里量，不必和翻页争方向。
 ///
-/// [images] 的顺序即翻页顺序，[initialIndex] 是首屏那张。传原图而不是缩略图
-/// ——放大到 2.5 倍还糊着就失去了全屏查看的意义。
+/// [photos] 的顺序即翻页顺序，[initialIndex] 是首屏那张。
 Future<void> showPhotoViewer(
   BuildContext context, {
-  required List<ImageProvider> images,
+  required List<ViewerPhoto> photos,
   int initialIndex = 0,
 }) {
   return Navigator.of(context, rootNavigator: true).push<void>(
@@ -33,16 +32,35 @@ Future<void> showPhotoViewer(
       reverseTransitionDuration: const Duration(milliseconds: 180),
       pageBuilder: (context, animation, _) => FadeTransition(
         opacity: animation,
-        child: _PhotoViewer(images: images, initialIndex: initialIndex),
+        child: _PhotoViewer(photos: photos, initialIndex: initialIndex),
       ),
     ),
   );
 }
 
-class _PhotoViewer extends StatefulWidget {
-  const _PhotoViewer({required this.images, required this.initialIndex});
+/// 查看器里的一张照片。
+///
+/// [image] 是原图——放大到 2.5 倍还糊着就失去了全屏查看的意义。原图动辄几千万
+/// 像素，解码要几百毫秒，这段时间先把 [preview] 放大垫着：它是列表里正显示着的
+/// 那张缩略图，provider 与列表里的相同，直接命中图片缓存，不用再解码。
+class ViewerPhoto {
+  const ViewerPhoto({required this.image, this.preview, this.caption});
 
-  final List<ImageProvider> images;
+  final ImageProvider image;
+  final ImageProvider? preview;
+
+  /// 照片名称，非空时显示在底部。
+  final String? caption;
+}
+
+/// 原图解码的长边上限。超过这个尺寸的照片按它解码：约是手机屏宽的三倍多，
+/// 放到最大倍数看报告小字依然清楚，解码时间和内存却省下一大截。存盘的原图不受影响。
+const _kMaxDecodeSide = 4096;
+
+class _PhotoViewer extends StatefulWidget {
+  const _PhotoViewer({required this.photos, required this.initialIndex});
+
+  final List<ViewerPhoto> photos;
   final int initialIndex;
 
   @override
@@ -79,11 +97,23 @@ class _PhotoViewerState extends State<_PhotoViewer>
   /// 位移到多少算「完全退出」，用来把缩放和背景透明度归一化。
   static const double _kDragRange = 320;
 
+  late final List<ImageProvider> _decoded = [
+    for (final photo in widget.photos)
+      ResizeImage(
+        photo.image,
+        width: _kMaxDecodeSide,
+        height: _kMaxDecodeSide,
+        policy: ResizeImagePolicy.fit,
+        allowUpscaling: false,
+      ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: _index);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _precacheNeighbors());
     _settle =
         AnimationController(
           vsync: this,
@@ -100,6 +130,15 @@ class _PhotoViewerState extends State<_PhotoViewer>
     _settle.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  /// 提前解码左右相邻的两张，翻过去时已经是清晰图。
+  void _precacheNeighbors() {
+    if (!mounted) return;
+    for (final i in [_index - 1, _index + 1]) {
+      if (i < 0 || i >= _decoded.length) continue;
+      precacheImage(_decoded[i], context, onError: (_, _) {});
+    }
   }
 
   /// 下滑进度 0~1，驱动图片缩小与黑底渐隐。
@@ -156,8 +195,10 @@ class _PhotoViewerState extends State<_PhotoViewer>
 
   @override
   Widget build(BuildContext context) {
-    final count = widget.images.length;
+    final count = widget.photos.length;
     final topInset = MediaQuery.paddingOf(context).top;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final caption = widget.photos[_index].caption ?? '';
     final progress = _dragProgress;
     // 跟手时图片缩到 0.85、黑底退到两成：路由本身是透明的，底下的页面透出来
     // 才有「往回收」的感觉，全黑到底就只是图片在动。
@@ -185,9 +226,13 @@ class _PhotoViewerState extends State<_PhotoViewer>
                   physics: _zoomed || _pointers >= 2
                       ? const NeverScrollableScrollPhysics()
                       : const PageScrollPhysics(),
-                  onPageChanged: (value) => setState(() => _index = value),
+                  onPageChanged: (value) {
+                    setState(() => _index = value);
+                    _precacheNeighbors();
+                  },
                   itemBuilder: (context, i) => _ZoomablePhoto(
-                    image: widget.images[i],
+                    image: _decoded[i],
+                    preview: widget.photos[i].preview,
                     active: i == _index,
                     // 未放大时不让它接管单指拖动，那是下滑关闭要用的。
                     panEnabled: _zoomed,
@@ -212,6 +257,18 @@ class _PhotoViewerState extends State<_PhotoViewer>
                 ),
               ),
             ),
+            if (caption.isNotEmpty)
+              Positioned(
+                left: 24,
+                right: 24,
+                bottom: bottomInset + 20,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: chromeOpacity,
+                    child: Center(child: _CaptionPill(text: caption)),
+                  ),
+                ),
+              ),
             if (count > 1)
               Positioned(
                 top: topInset + 4,
@@ -238,6 +295,7 @@ class _PhotoViewerState extends State<_PhotoViewer>
 class _ZoomablePhoto extends StatefulWidget {
   const _ZoomablePhoto({
     required this.image,
+    required this.preview,
     required this.active,
     required this.panEnabled,
     required this.onZoomChanged,
@@ -245,6 +303,9 @@ class _ZoomablePhoto extends StatefulWidget {
   });
 
   final ImageProvider image;
+
+  /// 原图解码出第一帧之前垫着的缩略图。
+  final ImageProvider? preview;
 
   /// 是否是当前页。翻走时要复位，且不该再上报缩放状态。
   final bool active;
@@ -360,7 +421,17 @@ class _ZoomablePhotoState extends State<_ZoomablePhoto>
         maxScale: _kMaxScale,
         panEnabled: widget.panEnabled,
         child: Center(
-          child: Image(image: widget.image, fit: BoxFit.contain),
+          child: Image(
+            image: widget.image,
+            fit: BoxFit.contain,
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+              final preview = widget.preview;
+              if (wasSynchronouslyLoaded || frame != null || preview == null) {
+                return child;
+              }
+              return Image(image: preview, fit: BoxFit.contain);
+            },
+          ),
         ),
       ),
     );
@@ -389,6 +460,31 @@ class _GlassButton extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 20, color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// 底部的照片名称。照片明暗不可控，同样垫半透明黑底。
+class _CaptionPill extends StatelessWidget {
+  const _CaptionPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x66000000),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.white),
       ),
     );
   }

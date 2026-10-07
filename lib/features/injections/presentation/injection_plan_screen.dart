@@ -6,8 +6,9 @@ import '../../../core/database/app_database.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import 'drug_choice_field.dart';
 
-/// 注射计划：药品、间隔、常用部位、注意事项。
+/// 注射计划：药品（从药品列表里选）、间隔、常用部位、注意事项。
 class InjectionPlanScreen extends ConsumerStatefulWidget {
   const InjectionPlanScreen({super.key, required this.profileId, this.plan});
 
@@ -20,7 +21,7 @@ class InjectionPlanScreen extends ConsumerStatefulWidget {
 }
 
 class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
-  late final _drug = TextEditingController(text: widget.plan?.drug ?? '');
+  late String? _drugId = widget.plan?.drugId;
   late final _interval = TextEditingController(
     text: '${widget.plan?.intervalDays ?? 14}',
   );
@@ -32,7 +33,6 @@ class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
 
   @override
   void dispose() {
-    _drug.dispose();
     _interval.dispose();
     _note.dispose();
     super.dispose();
@@ -58,22 +58,41 @@ class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
       );
       return;
     }
+    // 选中的药品可能刚在药品列表里被删掉。
+    final drugs = ref.read(drugsProvider(widget.profileId)).value ?? const [];
+    final drugId = drugs.any((drug) => drug.id == _drugId) ? _drugId : null;
     setState(() => _saving = true);
-    await ref
-        .read(databaseProvider)
-        .saveInjectionPlan(
-          profileId: widget.profileId,
-          drug: _drug.text.trim(),
-          intervalDays: interval,
-          sites: _sites,
-          note: _note.text.trim(),
-        );
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await ref
+          .read(databaseProvider)
+          .saveInjectionPlan(
+            profileId: widget.profileId,
+            drugId: drugId,
+            intervalDays: interval,
+            sites: _sites,
+            note: _note.text.trim(),
+          );
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showAppToast(
+        context,
+        message: '保存失败',
+        description: '$error',
+        level: AppToastLevel.error,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final drugs = ref.watch(drugsProvider(widget.profileId)).value;
+    final selectedName = drugs
+        ?.where((drug) => drug.id == _drugId)
+        .firstOrNull
+        ?.name;
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       body: AppTopBar(
@@ -83,8 +102,20 @@ class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
             padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottom),
             sliver: SliverList.list(
               children: [
-                AppTextField(controller: _drug, label: const Text('药品')),
-                const SizedBox(height: 16),
+                DrugChoiceField(
+                  profileId: widget.profileId,
+                  names: [
+                    for (final drug in drugs ?? const <DrugEntry>[]) drug.name,
+                  ],
+                  selected: selectedName,
+                  onChanged: (name) => setState(() {
+                    _drugId = drugs
+                        ?.where((drug) => drug.name == name)
+                        .firstOrNull
+                        ?.id;
+                  }),
+                ),
+                const SizedBox(height: 20),
                 AppTextField(
                   controller: _interval,
                   label: const Text('间隔天数'),
@@ -132,7 +163,7 @@ class _InjectionPlanScreenState extends ConsumerState<InjectionPlanScreen> {
                 const SizedBox(height: 28),
                 BottomActionButton(
                   label: '保存',
-                  busy: _saving,
+                  busy: _saving || drugs == null,
                   onPressed: _save,
                 ),
               ],

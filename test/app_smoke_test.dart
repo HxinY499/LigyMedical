@@ -13,9 +13,13 @@ import 'package:ligy_medical/core/theme/app_theme.dart';
 import 'package:ligy_medical/features/profiles/presentation/profile_avatar.dart';
 import 'package:ligy_medical/core/utils/ledger_date.dart';
 import 'package:ligy_medical/features/records/application/record_service.dart';
+import 'package:ligy_medical/shared/widgets/choice_chips.dart';
 
 Future<void> _seed(AppDatabase db) async {
-  final service = RecordService(db, ImageStorage.atRoot('/tmp/ligy_medical_unused'));
+  final service = RecordService(
+    db,
+    ImageStorage.atRoot('/tmp/ligy_medical_unused'),
+  );
   await db.upsertProfile(
     id: 'me',
     name: '我',
@@ -51,11 +55,19 @@ Future<void> _seed(AppDatabase db) async {
       ),
     );
   }
-  final crp = (await db.indicatorList('me')).firstWhere((i) => i.name == 'C反应蛋白');
-  await db.updateIndicator(id: crp.id, unit: 'mg/L', refLow: null, refHigh: 1.7);
+  final crp = (await db.indicatorList(
+    'me',
+  )).firstWhere((i) => i.name == 'C反应蛋白');
+  await db.updateIndicator(
+    id: crp.id,
+    unit: 'mg/L',
+    refLow: null,
+    refHigh: 1.7,
+  );
+  await db.saveDrug(id: 'ada', profileId: 'me', name: '阿达木单抗');
   await db.saveInjectionPlan(
     profileId: 'me',
-    drug: '阿达木单抗',
+    drugId: 'ada',
     intervalDays: 14,
     sites: const ['左腹', '右腹'],
     note: '感冒发烧嗓子疼等，都不能打，要往后延',
@@ -65,7 +77,9 @@ Future<void> _seed(AppDatabase db) async {
     await db.saveInjection(
       id: 'inj$i',
       profileId: 'me',
-      date: dateKey(today.subtract(Duration(days: 14 * (5 - i) + (i == 2 ? 7 : 0)))),
+      date: dateKey(
+        today.subtract(Duration(days: 14 * (5 - i) + (i == 2 ? 7 : 0))),
+      ),
       drug: '阿达木单抗',
       site: i.isEven ? '左腹' : '右腹',
       place: '自己打',
@@ -99,7 +113,9 @@ void main() {
     );
     Future<void> settle() async {
       for (var i = 0; i < 8; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
         await tester.pump(const Duration(milliseconds: 100));
       }
     }
@@ -161,6 +177,18 @@ void main() {
     await tester.tap(find.byTooltip('记录注射'));
     await settle();
     expect(find.text('记录注射'), findsOneWidget);
+    // 新建时默认选中计划的药品。
+    final defaultDrug = tester.widget<AppChip>(
+      find.widgetWithText(AppChip, '阿达木单抗'),
+    );
+    expect(defaultDrug.selected, isTrue);
+    await tester.scrollUntilVisible(
+      find.text('照片'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('拍照'), findsOneWidget);
+    expect(find.text('相册'), findsOneWidget);
     await back();
     await settle();
 
@@ -168,6 +196,22 @@ void main() {
     await tester.tap(find.byTooltip('注射计划'));
     await settle();
     expect(find.text('注射计划'), findsOneWidget);
+    expect(
+      tester.widget<AppChip>(find.widgetWithText(AppChip, '阿达木单抗')).selected,
+      isTrue,
+    );
+    await back();
+    await settle();
+
+    // 药品列表 → 编辑药品
+    await tester.tap(find.byTooltip('药品'));
+    await settle();
+    await tester.tap(find.text('阿达木单抗'));
+    await settle();
+    expect(find.text('编辑药品'), findsOneWidget);
+    expect(find.text('照片'), findsOneWidget);
+    await back();
+    await settle();
     await back();
     await settle();
 

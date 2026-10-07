@@ -47,10 +47,16 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
     final planAsync = ref.watch(injectionPlanProvider(widget.profileId));
     final injectionsAsync = ref.watch(injectionsProvider(widget.profileId));
     final injections = injectionsAsync.value;
+    final photos =
+        ref.watch(injectionPhotosProvider(widget.profileId)).value ?? const [];
+    final photoInjectionIds = {for (final photo in photos) ?photo.injectionId};
     if (injections == null || planAsync.isLoading) {
       return const SliverToBoxAdapter();
     }
     final plan = planAsync.value;
+    final drugs = ref.watch(drugsProvider(widget.profileId)).value ?? const [];
+    final planDrug =
+        drugs.where((drug) => drug.id == plan?.drugId).firstOrNull?.name ?? '';
     final interval = plan?.intervalDays ?? 14;
     final next = nextInjectionDate(injections, interval);
 
@@ -58,7 +64,7 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList.list(
         children: [
-          _SummaryCard(plan: plan, next: next),
+          _SummaryCard(plan: plan, drug: planDrug, next: next),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 20, 0, 8),
             child: Row(
@@ -133,6 +139,7 @@ class _InjectionsTabState extends ConsumerState<InjectionsTab> {
                         number: injections.length - i,
                         intervalDays: intervalBefore(injections, i),
                         planInterval: interval,
+                        hasPhotos: photoInjectionIds.contains(injections[i].id),
                         onTap: () => _openEditor(entry: injections[i]),
                       ),
                     ],
@@ -162,9 +169,14 @@ List<(String, List<int>)> _groupByYear(List<InjectionEntry> latestFirst) {
 ///
 /// 记录注射走页面右下角的 + 号，计划设置走页头图标，卡里不再放按钮。
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.plan, required this.next});
+  const _SummaryCard({
+    required this.plan,
+    required this.drug,
+    required this.next,
+  });
 
   final InjectionPlanEntry? plan;
+  final String drug;
   final DateTime? next;
 
   @override
@@ -172,7 +184,6 @@ class _SummaryCard extends StatelessWidget {
     final colors = context.colors;
     final next = this.next;
     final overdue = next != null && next.isBefore(dateOnly(DateTime.now()));
-    final drug = plan?.drug ?? '';
     final note = plan?.note ?? '';
     final details = '每${plan?.intervalDays ?? 14}天';
     return SurfaceCard(
@@ -279,6 +290,7 @@ class _InjectionRow extends StatelessWidget {
     required this.number,
     required this.intervalDays,
     required this.planInterval,
+    required this.hasPhotos,
     required this.onTap,
   });
 
@@ -286,6 +298,7 @@ class _InjectionRow extends StatelessWidget {
   final int number;
   final int? intervalDays;
   final int planInterval;
+  final bool hasPhotos;
   final VoidCallback onTap;
 
   @override
@@ -331,16 +344,30 @@ class _InjectionRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                      color: colors.ink,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            height: 1.4,
+                            color: colors.ink,
+                          ),
+                        ),
+                      ),
+                      if (hasPhotos) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          FLucideIcons.image,
+                          size: 14,
+                          color: colors.inactive,
+                        ),
+                      ],
+                    ],
                   ),
                   if (subtitle.isNotEmpty)
                     Text(

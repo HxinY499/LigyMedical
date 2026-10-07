@@ -5,13 +5,15 @@ import 'app_text_field.dart';
 
 /// 单行文本输入弹窗，外观与 [showAppConfirmDialog] 同一套。
 ///
-/// 返回去掉首尾空格后的文本；取消或输入为空返回 null。
+/// 返回去掉首尾空格后的文本；取消返回 null。输入为空时：[allowEmpty] 为 true
+/// 返回空串（用于清空），否则也返回 null。
 Future<String?> showAppInputDialog(
   BuildContext context, {
   required String title,
   String initial = '',
   String? hint,
   String confirmLabel = '确定',
+  bool allowEmpty = false,
 }) {
   return showDialog<String>(
     context: context,
@@ -20,6 +22,7 @@ Future<String?> showAppInputDialog(
       initial: initial,
       hint: hint,
       confirmLabel: confirmLabel,
+      allowEmpty: allowEmpty,
     ),
   );
 }
@@ -30,12 +33,14 @@ class _InputDialog extends StatefulWidget {
     required this.initial,
     required this.hint,
     required this.confirmLabel,
+    required this.allowEmpty,
   });
 
   final String title;
   final String initial;
   final String? hint;
   final String confirmLabel;
+  final bool allowEmpty;
 
   @override
   State<_InputDialog> createState() => _InputDialogState();
@@ -54,7 +59,7 @@ class _InputDialogState extends State<_InputDialog> {
 
   void _submit() {
     final value = _controller.text.trim();
-    Navigator.pop(context, value.isEmpty ? null : value);
+    Navigator.pop(context, value.isEmpty && !widget.allowEmpty ? null : value);
   }
 
   @override

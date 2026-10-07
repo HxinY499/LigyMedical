@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
@@ -289,7 +287,10 @@ class _ImageGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
+        const cacheWidth = 360;
         final size = (constraints.maxWidth - spacing * 2) / 3;
+        String thumbOf(AttachmentEntry image) =>
+            image.thumbnailPath ?? image.path;
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
@@ -298,18 +299,45 @@ class _ImageGrid extends StatelessWidget {
               GestureDetector(
                 onTap: () => showPhotoViewer(
                   context,
-                  images: [
+                  photos: [
                     for (final image in images)
-                      FileImage(
-                        File(ImageStorage.resolveSyncPath(image.path) ?? ''),
+                      ViewerPhoto(
+                        image: localOriginalProvider(image.path),
+                        preview: localThumbnailProvider(
+                          thumbOf(image),
+                          cacheWidth,
+                        ),
+                        caption: image.name,
                       ),
                   ],
                   initialIndex: i,
                 ),
-                child: LocalThumbnail(
-                  relativePath: images[i].thumbnailPath ?? images[i].path,
-                  size: size,
-                  cacheWidth: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LocalThumbnail(
+                      relativePath: thumbOf(images[i]),
+                      size: size,
+                      cacheWidth: cacheWidth,
+                    ),
+                    if (images[i].name.isNotEmpty)
+                      SizedBox(
+                        width: size,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            images[i].name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: context.colors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
           ],
@@ -326,12 +354,16 @@ class PdfTile extends StatelessWidget {
     required this.name,
     required this.onTap,
     this.sizeBytes,
+    this.onRename,
     this.onRemove,
   });
 
   final String name;
   final int? sizeBytes;
   final VoidCallback? onTap;
+
+  /// 编辑页里改名用；为 null 时不显示改名按钮。
+  final VoidCallback? onRename;
   final VoidCallback? onRemove;
 
   @override
@@ -386,6 +418,16 @@ class PdfTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onRename != null)
+                IconButton(
+                  onPressed: onRename,
+                  tooltip: '改名',
+                  icon: Icon(
+                    FLucideIcons.pencil,
+                    size: 17,
+                    color: colors.muted,
+                  ),
+                ),
               if (onRemove != null)
                 IconButton(
                   onPressed: onRemove,

@@ -5,6 +5,7 @@ import 'package:forui/forui.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/format.dart';
 import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../indicators/application/indicator_range.dart';
@@ -227,7 +228,7 @@ class RecordRow extends StatelessWidget {
                     ),
                   if (bundle.indicators.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: 8),
                       child: _IndicatorLine(items: bundle.indicators),
                     ),
                 ],
@@ -254,46 +255,130 @@ class RecordRow extends StatelessWidget {
   }
 }
 
-/// 行内指标：`血沉 2 mm/h   C反应蛋白 1.75 mg/L ↑`，异常值标红。
+/// 行内指标：每项一个小块（名称 · 数值 · 单位），块内不折行，异常的整块标红。
+///
+/// 体检一次能带几十项，列表里只露前 [_kMaxShown] 项，其余收成「+N」，
+/// 完整的在详情页看。
 class _IndicatorLine extends StatelessWidget {
   const _IndicatorLine({required this.items});
 
   final List<RecordIndicator> items;
 
+  static const _kMaxShown = 4;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Text.rich(
-      TextSpan(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const TextSpan(text: '    '),
-            TextSpan(
-              text: '${items[i].indicator.name} ',
-              style: TextStyle(color: colors.inactive),
-            ),
-            TextSpan(
-              text: _valueText(items[i]),
+    final shown = items.take(_kMaxShown).toList();
+    final hidden = items.length - shown.length;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final item in shown) _IndicatorChip(item: item),
+        if (hidden > 0)
+          _ChipBox(
+            background: colors.fill,
+            child: Text(
+              '+$hidden',
               style: TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isAbnormal(items[i].indicator, items[i].value.value)
-                    ? colors.danger
-                    : colors.ink,
+                color: colors.muted,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _IndicatorChip extends StatelessWidget {
+  const _IndicatorChip({required this.item});
+
+  final RecordIndicator item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final value = item.value.value;
+    final status = rangeStatus(item.indicator, value);
+    final abnormal = isAbnormal(item.indicator, value);
+    final unit = item.indicator.unit;
+    return _ChipBox(
+      background: abnormal ? colors.dangerSoft : colors.fill,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          // 名称最先让位：长名字省略，数值始终完整。
+          Flexible(
+            child: Text(
+              item.indicator.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: abnormal ? colors.danger : colors.muted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            formatNumber(value),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: abnormal ? colors.danger : colors.ink,
+            ),
+          ),
+          if (unit.isNotEmpty) ...[
+            const SizedBox(width: 2),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 11,
+                color: abnormal ? colors.danger : colors.inactive,
               ),
             ),
           ],
+          if (status == RangeStatus.high || status == RangeStatus.low)
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Icon(
+                status == RangeStatus.high
+                    ? FLucideIcons.arrowUp
+                    : FLucideIcons.arrowDown,
+                size: 12,
+                color: colors.danger,
+              ),
+            ),
         ],
       ),
-      style: const TextStyle(fontSize: 12.5, height: 1.5),
     );
   }
+}
 
-  static String _valueText(RecordIndicator item) {
-    final arrow = switch (rangeStatus(item.indicator, item.value.value)) {
-      RangeStatus.high => ' ↑',
-      RangeStatus.low => ' ↓',
-      _ => '',
-    };
-    return formatValueWithUnit(item.value.value, item.indicator.unit) + arrow;
+/// 指标小块的底：浅灰圆角，最宽不超过一行的大半，免得一项独占一行。
+class _ChipBox extends StatelessWidget {
+  const _ChipBox({required this.background, required this.child});
+
+  final Color background;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 200),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: context.radii.chipAll,
+        ),
+        child: child,
+      ),
+    );
   }
 }

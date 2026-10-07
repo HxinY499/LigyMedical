@@ -15,7 +15,12 @@ class PendingAttachment {
 
   final AttachmentKind kind;
   final String sourcePath;
+
+  /// 附件名称，可为空。
   final String name;
+
+  PendingAttachment rename(String name) =>
+      PendingAttachment(kind: kind, sourcePath: sourcePath, name: name);
 }
 
 /// 编辑器里的一行指标。
@@ -59,7 +64,7 @@ class RecordDraft {
   final Map<String, String> fields;
   final List<IndicatorInput> indicators;
 
-  /// 编辑时保留下来的旧附件（按显示顺序）。
+  /// 编辑时保留下来的旧附件（按显示顺序，名称以这里为准）。
   final List<AttachmentEntry> keptAttachments;
   final List<PendingAttachment> newAttachments;
 }
@@ -89,8 +94,8 @@ class RecordService {
           case AttachmentKind.image:
             final stored = await _storage.storeImage(
               sourcePath: pending.sourcePath,
-              recordId: recordId,
-              attachmentId: attachmentId,
+              ownerId: recordId,
+              fileId: attachmentId,
             );
             storedPaths
               ..add(stored.imagePath)
@@ -114,8 +119,8 @@ class RecordService {
                 .toLowerCase();
             final stored = await _storage.storeFile(
               sourcePath: pending.sourcePath,
-              recordId: recordId,
-              attachmentId: attachmentId,
+              ownerId: recordId,
+              fileId: attachmentId,
               extension: extension.isEmpty ? 'pdf' : extension,
             );
             storedPaths.add(stored.path);
@@ -220,9 +225,14 @@ class RecordService {
         }
         var order = 0;
         for (final kept in draft.keptAttachments) {
-          await (_db.update(_db.attachments)
-                ..where((row) => row.id.equals(kept.id)))
-              .write(AttachmentsCompanion(sortOrder: Value(order++)));
+          await (_db.update(
+            _db.attachments,
+          )..where((row) => row.id.equals(kept.id))).write(
+            AttachmentsCompanion(
+              name: Value(kept.name),
+              sortOrder: Value(order++),
+            ),
+          );
         }
         for (final row in newRows) {
           await _db
@@ -248,10 +258,10 @@ class RecordService {
     await (_db.delete(
       _db.records,
     )..where((row) => row.id.equals(record.id))).go();
-    await _storage.deleteRecordDirectory(record.id);
+    await _storage.deleteOwnerDirectory(record.id);
   }
 
-  /// 删除档案：库里级联删光，再清掉每条记录的附件目录。
+  /// 删除档案：库里级联删光，再清掉每条记录的附件目录和全部注射、药品照片。
   Future<void> deleteProfile(String profileId) async {
     final recordIds =
         await (_db.selectOnly(_db.records)
@@ -259,11 +269,21 @@ class RecordService {
               ..where(_db.records.profileId.equals(profileId)))
             .map((row) => row.read(_db.records.id)!)
             .get();
+    // 照片按各自路径删：早期的药品照片不在药品自己的目录下。
+    final photos = await (_db.select(
+      _db.injectionPhotos,
+    )..where((row) => row.profileId.equals(profileId))).get();
     await (_db.delete(
       _db.profiles,
     )..where((row) => row.id.equals(profileId))).go();
     for (final id in recordIds) {
-      await _storage.deleteRecordDirectory(id);
+      await _storage.deleteOwnerDirectory(id);
+    }
+    await _deleteFiles([
+      for (final photo in photos) ...[photo.path, photo.thumbnailPath],
+    ]);
+    for (final photo in photos) {
+      await _storage.deleteOwnerDirectory((photo.injectionId ?? photo.drugId)!);
     }
   }
 

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +12,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/editable_photo_grid.dart';
 import '../application/record_service.dart';
 import 'record_detail_screen.dart';
 import 'record_widgets.dart';
@@ -54,8 +53,6 @@ class _IndicatorRowState {
 }
 
 class _RecordEditorScreenState extends ConsumerState<RecordEditorScreen> {
-  final _picker = ImagePicker();
-
   late RecordKind _kind;
   late DateTime _date;
   late final TextEditingController _hospital;
@@ -168,35 +165,44 @@ class _RecordEditorScreenState extends ConsumerState<RecordEditorScreen> {
   // ------------------------------------------------------------------ 附件
 
   Future<void> _pickImages(ImageSource source) async {
-    try {
-      final List<XFile> picked;
-      if (source == ImageSource.camera) {
-        final shot = await _picker.pickImage(source: source);
-        picked = shot == null ? const [] : [shot];
-      } else {
-        picked = await _picker.pickMultiImage();
+    final picked = await pickPhotos(context, source);
+    if (picked.isEmpty || !mounted) return;
+    setState(() {
+      for (final file in picked) {
+        _pending.add(
+          PendingAttachment(
+            kind: AttachmentKind.image,
+            sourcePath: file.path,
+            name: '',
+          ),
+        );
       }
-      if (picked.isEmpty || !mounted) return;
-      setState(() {
-        for (final file in picked) {
-          _pending.add(
-            PendingAttachment(
-              kind: AttachmentKind.image,
-              sourcePath: file.path,
-              name: file.name,
-            ),
-          );
-        }
-      });
-    } on Exception catch (error) {
-      if (!mounted) return;
-      showAppToast(
-        context,
-        message: source == ImageSource.camera ? '无法打开相机' : '无法打开相册',
-        description: '$error',
-        level: AppToastLevel.error,
-      );
-    }
+    });
+  }
+
+  Future<String?> _askName(String current) => showAppInputDialog(
+    context,
+    title: '附件名称',
+    initial: current,
+    allowEmpty: true,
+  );
+
+  Future<void> _renameKept(AttachmentEntry item) async {
+    final name = await _askName(item.name);
+    if (name == null || !mounted) return;
+    setState(() {
+      final index = _kept.indexOf(item);
+      if (index >= 0) _kept[index] = item.copyWith(name: name);
+    });
+  }
+
+  Future<void> _renamePending(PendingAttachment item) async {
+    final name = await _askName(item.name);
+    if (name == null || !mounted) return;
+    setState(() {
+      final index = _pending.indexOf(item);
+      if (index >= 0) _pending[index] = item.rename(name);
+    });
   }
 
   Future<void> _pickPdf() async {
@@ -406,6 +412,8 @@ class _RecordEditorScreenState extends ConsumerState<RecordEditorScreen> {
                     onRemoveKept: (item) => setState(() => _kept.remove(item)),
                     onRemovePending: (item) =>
                         setState(() => _pending.remove(item)),
+                    onRenameKept: _renameKept,
+                    onRenamePending: _renamePending,
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -508,12 +516,16 @@ class _AttachmentEditor extends StatelessWidget {
     required this.pending,
     required this.onRemoveKept,
     required this.onRemovePending,
+    required this.onRenameKept,
+    required this.onRenamePending,
   });
 
   final List<AttachmentEntry> kept;
   final List<PendingAttachment> pending;
   final ValueChanged<AttachmentEntry> onRemoveKept;
   final ValueChanged<PendingAttachment> onRemovePending;
+  final ValueChanged<AttachmentEntry> onRenameKept;
+  final ValueChanged<PendingAttachment> onRenamePending;
 
   @override
   Widget build(BuildContext context) {
@@ -527,31 +539,23 @@ class _AttachmentEditor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (hasImages)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
+          EditablePhotoGrid(
+            photos: [
               for (final item in keptImages)
-                _RemovableThumb(
+                storedEditablePhoto(
+                  path: item.path,
+                  thumbnailPath: item.thumbnailPath ?? item.path,
                   onRemove: () => onRemoveKept(item),
-                  child: LocalThumbnail(
-                    relativePath: item.thumbnailPath ?? item.path,
-                    size: 76,
-                  ),
+                  name: item.name,
+                  onRename: () => onRenameKept(item),
                 ),
               for (final item in pendingImages)
-                _RemovableThumb(
+                pendingEditablePhoto(
+                  context,
+                  sourcePath: item.sourcePath,
                   onRemove: () => onRemovePending(item),
-                  child: ClipRRect(
-                    borderRadius: context.radii.blockAll,
-                    child: Image.file(
-                      File(item.sourcePath),
-                      width: 76,
-                      height: 76,
-                      fit: BoxFit.cover,
-                      cacheWidth: 240,
-                    ),
-                  ),
+                  name: item.name,
+                  onRename: () => onRenamePending(item),
                 ),
             ],
           ),
@@ -563,6 +567,7 @@ class _AttachmentEditor extends StatelessWidget {
               name: item.name,
               sizeBytes: item.sizeBytes,
               onTap: () => openStoredPdf(context, item.path),
+              onRename: () => onRenameKept(item),
               onRemove: () => onRemoveKept(item),
             ),
           ),
@@ -572,42 +577,10 @@ class _AttachmentEditor extends StatelessWidget {
             child: PdfTile(
               name: item.name,
               onTap: null,
+              onRename: () => onRenamePending(item),
               onRemove: () => onRemovePending(item),
             ),
           ),
-      ],
-    );
-  }
-}
-
-class _RemovableThumb extends StatelessWidget {
-  const _RemovableThumb({required this.child, required this.onRemove});
-
-  final Widget child;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        child,
-        Positioned(
-          top: -6,
-          right: -6,
-          child: GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: const BoxDecoration(
-                color: Color(0xCC000000),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(FLucideIcons.x, size: 13, color: Colors.white),
-            ),
-          ),
-        ),
       ],
     );
   }

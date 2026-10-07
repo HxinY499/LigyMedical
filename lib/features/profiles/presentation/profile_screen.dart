@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../indicators/presentation/indicator_edit_screen.dart';
 import '../../indicators/presentation/indicator_screen.dart';
 import '../../indicators/presentation/indicators_tab.dart';
+import '../../injections/presentation/drug_list_screen.dart';
 import '../../injections/presentation/injection_editor_screen.dart';
 import '../../injections/presentation/injection_plan_screen.dart';
 import '../../injections/presentation/injections_tab.dart';
@@ -138,6 +139,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   showBack: Navigator.of(context).canPop(),
                   collapsible: false,
                   actions: [
+                    if (tab == ProfileTab.injections)
+                      AppHeaderAction(
+                        icon: FLucideIcons.pill,
+                        tooltip: '药品',
+                        onTap: () => Navigator.of(context).push(
+                          profileRoute<void>(
+                            profile.id,
+                            (_) => DrugListScreen(profileId: profile.id),
+                          ),
+                        ),
+                      ),
                     if (tab == ProfileTab.injections)
                       AppHeaderAction(
                         icon: FLucideIcons.calendarCog,

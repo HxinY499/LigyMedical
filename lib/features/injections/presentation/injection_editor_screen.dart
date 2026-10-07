@@ -7,6 +7,9 @@ import '../../../core/database/app_database.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/ledger_date.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../application/injection_service.dart';
+import 'drug_choice_field.dart';
+import 'injection_photo_field.dart';
 
 class InjectionEditorScreen extends ConsumerStatefulWidget {
   const InjectionEditorScreen({
@@ -30,14 +33,19 @@ class InjectionEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
+  late final String _id = widget.entry?.id ?? const Uuid().v4();
   late DateTime _date;
-  late final TextEditingController _drug;
+  String? _drug;
   late final TextEditingController _place;
   late final TextEditingController _note;
   String? _site;
   List<String> _recentPlaces = const [];
 
-  /// 新建时的药品默认值要等计划和历史读出来才填得上，只填一次。
+  /// 已保存的照片。编辑时要等读出来才能保存，否则会把它们当成被删掉。
+  List<InjectionPhotoEntry>? _kept;
+  final List<String> _pending = [];
+
+  /// 新建时默认选计划的药品，要等计划和药品列表读出来才填得上，只填一次。
   bool _seeded = false;
   bool _saving = false;
 
@@ -50,12 +58,17 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
     _date = entry != null
         ? dateFromKey(entry.date)
         : dateOnly(widget.initialDate ?? DateTime.now());
-    _drug = TextEditingController(text: entry?.drug ?? '');
+    _drug = entry?.drug.isEmpty ?? true ? null : entry!.drug;
     _place = TextEditingController(text: entry?.place ?? '');
     _note = TextEditingController(text: entry?.note ?? '');
     _site = entry?.site.isEmpty ?? true ? null : entry!.site;
     _seeded = _editing;
     _loadRecentPlaces();
+    if (_editing) {
+      _loadPhotos();
+    } else {
+      _kept = [];
+    }
   }
 
   Future<void> _loadRecentPlaces() async {
@@ -65,38 +78,43 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
     if (mounted) setState(() => _recentPlaces = places);
   }
 
+  Future<void> _loadPhotos() async {
+    final photos = await ref.read(databaseProvider).photoList(injectionId: _id);
+    if (mounted) setState(() => _kept = [...photos]);
+  }
+
   @override
   void dispose() {
-    _drug.dispose();
     _place.dispose();
     _note.dispose();
     super.dispose();
   }
 
-  void _seedDefaults(
-    InjectionPlanEntry? plan,
-    List<InjectionEntry> injections,
-  ) {
+  void _seedDefaults(InjectionPlanEntry? plan, List<DrugEntry> drugs) {
     if (_seeded) return;
     _seeded = true;
-    final last = injections.firstOrNull;
-    final drug = (plan?.drug ?? '').isNotEmpty ? plan!.drug : last?.drug ?? '';
-    _drug.text = drug;
+    _drug = drugs.where((drug) => drug.id == plan?.drugId).firstOrNull?.name;
   }
 
   Future<void> _save() async {
+    final kept = _kept;
+    if (kept == null) return;
     setState(() => _saving = true);
     try {
       await ref
-          .read(databaseProvider)
+          .read(injectionServiceProvider)
           .saveInjection(
-            id: widget.entry?.id ?? const Uuid().v4(),
-            profileId: widget.profileId,
-            date: dateKey(_date),
-            drug: _drug.text.trim(),
-            site: _site ?? '',
-            place: _place.text.trim(),
-            note: _note.text.trim(),
+            InjectionDraft(
+              id: _id,
+              profileId: widget.profileId,
+              date: dateKey(_date),
+              drug: _drug ?? '',
+              site: _site ?? '',
+              place: _place.text.trim(),
+              note: _note.text.trim(),
+              keptPhotos: kept,
+              newPhotoPaths: _pending,
+            ),
           );
       if (mounted) Navigator.of(context).pop();
     } on Object catch (error) {
@@ -118,24 +136,32 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
       confirmLabel: '删除',
     );
     if (!confirmed || !mounted) return;
-    await ref.read(databaseProvider).deleteInjection(widget.entry!.id);
+    await ref.read(injectionServiceProvider).deleteInjection(_id);
     if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final planAsync = ref.watch(injectionPlanProvider(widget.profileId));
-    final injections = ref.watch(injectionsProvider(widget.profileId)).value;
+    final drugs = ref.watch(drugsProvider(widget.profileId)).value;
     final plan = planAsync.value;
     final sites = plan?.siteList ?? splitSites(kDefaultInjectionSites);
-    if (!planAsync.isLoading && injections != null) {
-      _seedDefaults(plan, injections);
+    if (!planAsync.isLoading && drugs != null) {
+      _seedDefaults(plan, drugs);
     }
-    // 记录里的部位不在计划的常用部位里（改过计划）时也要能看到并保留它。
+    // 记录里的部位 / 药品不在当前列表里（改过计划、药品改名或删了）时也要能看到并保留它。
     final siteOptions = [
       ...sites,
       if (_site != null && !sites.contains(_site)) _site!,
     ];
+    final drugNames = [
+      for (final drug in drugs ?? const <DrugEntry>[]) drug.name,
+    ];
+    final drugOptions = [
+      ...drugNames,
+      if (_drug != null && !drugNames.contains(_drug)) _drug!,
+    ];
+    final kept = _kept;
     final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -158,8 +184,13 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
                   value: _date,
                   onChanged: (value) => setState(() => _date = value),
                 ),
-                const SizedBox(height: 16),
-                AppTextField(controller: _drug, label: const Text('药品')),
+                const SizedBox(height: 20),
+                DrugChoiceField(
+                  profileId: widget.profileId,
+                  names: drugOptions,
+                  selected: _drug,
+                  onChanged: (name) => setState(() => _drug = name),
+                ),
                 const SizedBox(height: 20),
                 const FormSectionLabel('部位'),
                 ChoiceChips(
@@ -189,10 +220,22 @@ class _InjectionEditorScreenState extends ConsumerState<InjectionEditorScreen> {
                   minLines: 2,
                   maxLines: 6,
                 ),
+                if (kept != null) ...[
+                  const SizedBox(height: 24),
+                  InjectionPhotoField(
+                    label: '照片',
+                    kept: kept,
+                    pending: _pending,
+                    onRemoveKept: (photo) => setState(() => kept.remove(photo)),
+                    onRemovePending: (path) =>
+                        setState(() => _pending.remove(path)),
+                    onPicked: (paths) => setState(() => _pending.addAll(paths)),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 BottomActionButton(
                   label: '保存',
-                  busy: _saving,
+                  busy: _saving || kept == null,
                   onPressed: _save,
                 ),
               ],

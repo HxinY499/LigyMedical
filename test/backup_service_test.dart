@@ -8,7 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ligy_medical/core/backup/backup_service.dart';
 import 'package:ligy_medical/core/database/app_database.dart';
 import 'package:ligy_medical/core/media/image_storage.dart';
+import 'package:ligy_medical/features/injections/application/injection_service.dart';
 import 'package:ligy_medical/features/records/application/record_service.dart';
+
+import 'support/fake_image_compress.dart';
 
 void main() {
   // 「换机恢复」那条用例刻意同时开两个库。
@@ -17,6 +20,7 @@ void main() {
   late Directory temp;
 
   setUp(() async {
+    FakeImageCompress.install();
     temp = await Directory.systemTemp.createTemp('ligy_medical_backup');
   });
 
@@ -32,10 +36,19 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final storage = ImageStorage.atRoot(root.path);
-    return (db, storage, BackupService(db, storage), RecordService(db, storage));
+    return (
+      db,
+      storage,
+      BackupService(db, storage),
+      RecordService(db, storage),
+    );
   }
 
-  Future<void> seed(AppDatabase db, RecordService service) async {
+  Future<void> seed(
+    AppDatabase db,
+    ImageStorage storage,
+    RecordService service,
+  ) async {
     await db.upsertProfile(
       id: 'me',
       name: '我',
@@ -68,36 +81,58 @@ void main() {
         ],
       ),
     );
-    final crp = (await db.indicatorList('me')).firstWhere(
-      (i) => i.name == 'C反应蛋白',
-    );
+    final crp = (await db.indicatorList(
+      'me',
+    )).firstWhere((i) => i.name == 'C反应蛋白');
     await db.updateIndicator(id: crp.id, unit: 'mg/L', refLow: 0, refHigh: 1.7);
+    final injections = InjectionService(db, storage);
+    final box = File('${temp.path}/box.jpg')
+      ..writeAsBytesSync(List.generate(512, (i) => (i * 3) % 256));
+    await injections.saveDrug(
+      DrugDraft(
+        id: 'd1',
+        profileId: 'me',
+        name: '阿达木单抗',
+        keptPhotos: const [],
+        newPhotoPaths: [box.path],
+      ),
+    );
     await db.saveInjectionPlan(
       profileId: 'me',
-      drug: '阿达木单抗',
+      drugId: 'd1',
       intervalDays: 14,
       sites: const ['左腹', '右腹'],
       note: '感冒发烧不能打',
     );
-    await db.saveInjection(
-      id: 'i1',
-      profileId: 'me',
-      date: '2026-09-18',
-      drug: '阿达木单抗',
-      site: '左腹',
-      place: '自己打',
-      note: '',
+    final shot = File('${temp.path}/shot.jpg')
+      ..writeAsBytesSync(List.generate(1024, (i) => (i * 7) % 256));
+    await injections.saveInjection(
+      InjectionDraft(
+        id: 'i1',
+        profileId: 'me',
+        date: '2026-09-18',
+        drug: '阿达木单抗',
+        site: '左腹',
+        place: '自己打',
+        note: '',
+        keptPhotos: const [],
+        newPhotoPaths: [shot.path],
+      ),
     );
   }
 
   String fingerprint(DataSnapshot snapshot) => jsonEncode(snapshot.toJson());
 
-  test('导出后改乱数据，恢复回到备份那一刻（数据与附件文件）', () async {
+  test('导出后改乱数据，恢复回到备份那一刻（数据与附件、注射照片文件）', () async {
     final (db, storage, backup, service) = await device('phone');
-    await seed(db, service);
+    await seed(db, storage, service);
     final before = await db.exportSnapshot();
-    final pdfPath = before.attachments.single.path;
-    final pdfBytes = await (await storage.resolve(pdfPath)).readAsBytes();
+    final files = {
+      for (final path in before.filePaths)
+        path: await (await storage.resolve(path)).readAsBytes(),
+    };
+    expect(before.drugs.single.name, '阿达木单抗');
+    expect(before.injectionPhotos, hasLength(2), reason: '一张药品照片、一张注射照片');
 
     final file = File('${temp.path}/backup.ligymedical');
     await backup.writeBackupTo(file);
@@ -108,7 +143,7 @@ void main() {
     expect(preview.attachmentCount, 1);
     expect(preview.injectionCount, 1);
 
-    // 改乱：删记录（连带删附件文件）、加档案、删注射。
+    // 改乱：删记录（连带删附件文件）、加档案、删注射、删药品。
     await service.delete(before.records.single);
     await db.upsertProfile(
       id: 'mom',
@@ -116,21 +151,26 @@ void main() {
       colorIndex: 1,
       injectionEnabled: false,
     );
-    await db.deleteInjection('i1');
-    expect(await (await storage.resolve(pdfPath)).exists(), isFalse);
+    await InjectionService(db, storage).deleteInjection('i1');
+    await InjectionService(db, storage).deleteDrug('d1');
+    for (final path in files.keys) {
+      expect(await (await storage.resolve(path)).exists(), isFalse);
+    }
 
     await backup.restore(file.path);
 
     final after = await db.exportSnapshot();
     expect(fingerprint(after), fingerprint(before));
-    expect(await (await storage.resolve(pdfPath)).readAsBytes(), pdfBytes);
+    for (final MapEntry(key: path, value: bytes) in files.entries) {
+      expect(await (await storage.resolve(path)).readAsBytes(), bytes);
+    }
     final series = await db.watchIndicatorSeries('me').first;
     expect(series.map((s) => s.indicator.name).toSet(), {'血沉', 'C反应蛋白'});
   });
 
   test('在一台全新的手机上恢复', () async {
-    final (db1, _, backup1, service1) = await device('old');
-    await seed(db1, service1);
+    final (db1, storage1, backup1, service1) = await device('old');
+    await seed(db1, storage1, service1);
     final file = File('${temp.path}/backup.ligymedical');
     await backup1.writeBackupTo(file);
 
@@ -141,13 +181,15 @@ void main() {
       fingerprint(await db2.exportSnapshot()),
       fingerprint(await db1.exportSnapshot()),
     );
-    final pdf = (await db2.exportSnapshot()).attachments.single;
-    expect(await (await storage2.resolve(pdf.path)).exists(), isTrue);
+    final restored = await db2.exportSnapshot();
+    for (final path in restored.filePaths) {
+      expect(await (await storage2.resolve(path)).exists(), isTrue);
+    }
   });
 
   test('附件文件丢失时拒绝导出', () async {
     final (db, storage, backup, service) = await device('phone');
-    await seed(db, service);
+    await seed(db, storage, service);
     final pdf = (await db.exportSnapshot()).attachments.single;
     await storage.deleteFile(pdf.path);
     expect(
@@ -157,17 +199,18 @@ void main() {
   });
 
   test('不是备份文件时报格式错误且不动现有数据', () async {
-    final (db, _, backup, service) = await device('phone');
-    await seed(db, service);
+    final (db, storage, backup, service) = await device('phone');
+    await seed(db, storage, service);
     final before = fingerprint(await db.exportSnapshot());
-    final junk = File('${temp.path}/junk.ligymedical')..writeAsStringSync('hello');
+    final junk = File('${temp.path}/junk.ligymedical')
+      ..writeAsStringSync('hello');
     expect(() => backup.restore(junk.path), throwsFormatException);
     expect(fingerprint(await db.exportSnapshot()), before);
   });
 
   test('附件路径越界的备份被拒绝', () async {
-    final (db, _, backup, service) = await device('phone');
-    await seed(db, service);
+    final (db, storage, backup, service) = await device('phone');
+    await seed(db, storage, service);
     final good = File('${temp.path}/good.ligymedical');
     await backup.writeBackupTo(good);
 

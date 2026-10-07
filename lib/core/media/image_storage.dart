@@ -23,10 +23,10 @@ class StoredFile {
   final int sizeBytes;
 }
 
-/// 记录附件的落盘。库里只存相对 support 目录的路径。
+/// 附件与照片的落盘。库里只存相对 support 目录的路径。
 ///
-/// 目录结构：`media/{recordId}/{attachmentId}.<原扩展名>|_thumb.jpg`。
-/// 删记录时整目录清掉即可。
+/// 目录结构：`media/{ownerId}/{fileId}.<原扩展名>|_thumb.jpg`。ownerId 是记录、
+/// 注射或药品的 id。删掉所属对象时整目录清掉即可。
 class ImageStorage {
   ImageStorage() : _overrideRoot = null;
 
@@ -61,9 +61,9 @@ class ImageStorage {
   /// 所有相对路径的根。备份恢复要在它下面建暂存目录、整体换 media 目录。
   Future<String> supportRoot() => _supportRoot();
 
-  Future<Directory> _recordDirectory(String recordId) async {
+  Future<Directory> _ownerDirectory(String ownerId) async {
     final directory = Directory(
-      p.join(await _supportRoot(), kMediaDirName, recordId),
+      p.join(await _supportRoot(), kMediaDirName, ownerId),
     );
     await directory.create(recursive: true);
     return directory;
@@ -76,20 +76,18 @@ class ImageStorage {
   /// 详情页和全屏查看一律读原图。
   Future<StoredImage> storeImage({
     required String sourcePath,
-    required String recordId,
-    required String attachmentId,
+    required String ownerId,
+    required String fileId,
   }) async {
-    final directory = await _recordDirectory(recordId);
+    final directory = await _ownerDirectory(ownerId);
     final extension = p.extension(sourcePath).toLowerCase();
     final imageFile = File(
       p.join(
         directory.path,
-        '$attachmentId${extension.isEmpty ? '.jpg' : extension}',
+        '$fileId${extension.isEmpty ? '.jpg' : extension}',
       ),
     );
-    final thumbnailFile = File(
-      p.join(directory.path, '${attachmentId}_thumb.jpg'),
-    );
+    final thumbnailFile = File(p.join(directory.path, '${fileId}_thumb.jpg'));
     await File(sourcePath).copy(imageFile.path);
 
     final thumbnail = await FlutterImageCompress.compressAndGetFile(
@@ -117,12 +115,12 @@ class ImageStorage {
   /// 原样拷贝一份文件（PDF）。不做任何转码：报告文件必须和医院给的一致。
   Future<StoredFile> storeFile({
     required String sourcePath,
-    required String recordId,
-    required String attachmentId,
+    required String ownerId,
+    required String fileId,
     required String extension,
   }) async {
-    final directory = await _recordDirectory(recordId);
-    final target = File(p.join(directory.path, '$attachmentId.$extension'));
+    final directory = await _ownerDirectory(ownerId);
+    final target = File(p.join(directory.path, '$fileId.$extension'));
     await File(sourcePath).copy(target.path);
     return StoredFile(
       path: p.relative(target.path, from: await _supportRoot()),
@@ -141,9 +139,9 @@ class ImageStorage {
     }
   }
 
-  Future<void> deleteRecordDirectory(String recordId) async {
+  Future<void> deleteOwnerDirectory(String ownerId) async {
     final directory = Directory(
-      p.join(await _supportRoot(), kMediaDirName, recordId),
+      p.join(await _supportRoot(), kMediaDirName, ownerId),
     );
     if (await directory.exists()) {
       await directory.delete(recursive: true);
